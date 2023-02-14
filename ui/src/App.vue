@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import NavbarLayout from "./layouts/NavbarLayout.vue";
 import FullPageLayout from "./layouts/FullPageLayout.vue";
+import LoadingIndicator from "./components/LoadingIndicator.vue";
 
 const route = useRoute();
 
@@ -17,6 +18,7 @@ const showNavbar = computed(() => {
 
 <template>
   <div class="h-full">
+    <LoadingIndicator />
     <component :is="showNavbar">
       <RouterView />
     </component>
