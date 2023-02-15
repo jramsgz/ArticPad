@@ -8,17 +8,17 @@
             :key="item.name"
             :to="item.href"
             :class="[
-              item.current
+              item.tab === currentTab
                 ? 'bg-gray-900 text-indigo-400 hover:bg-gray-700'
                 : 'text-gray-200 hover:text-gray-100 hover:bg-gray-700',
               'group rounded-md px-3 py-2 flex items-center text-sm font-medium',
             ]"
-            :aria-current="item.current ? 'page' : undefined"
+            :aria-current="item.tab === currentTab ? 'page' : undefined"
           >
             <component
               :is="item.icon"
               :class="[
-                item.current
+                item.tab === currentTab
                   ? 'text-indigo-500'
                   : 'text-gray-400 group-hover:text-gray-500',
                 'flex-shrink-0 -ml-1 mr-3 h-6 w-6',
@@ -41,7 +41,6 @@
 </template>
 
 <script setup lang="ts">
-import ToolbarNav from "@/components/ToolbarNav.vue";
 import {
   CogIcon,
   KeyIcon,
@@ -51,52 +50,52 @@ import {
 import { ProfileTab, AccountTab, AdminTab } from "@/components/settings";
 import { useRouter } from "vue-router";
 import { ref, markRaw, watchEffect } from "vue";
-const router = useRouter();
 
-const subNavigation = [
+interface SubNavigationItem {
+  name: string;
+  href: string;
+  icon: any;
+  tab: any;
+}
+
+const subNavigation: SubNavigationItem[] = [
   {
     name: "Profile",
     href: "/settings/profile",
     icon: UserCircleIcon,
-    current: false,
+    tab: ProfileTab,
   },
-  { name: "Account", href: "/settings/account", icon: CogIcon, current: false },
+  {
+    name: "Account",
+    href: "/settings/account",
+    icon: CogIcon,
+    tab: AccountTab,
+  },
   {
     name: "Password",
     href: "/settings/password",
     icon: KeyIcon,
-    current: false,
+    tab: AccountTab,
   },
   {
     name: "Admin",
     href: "/settings/admin",
     icon: AdjustmentsHorizontalIcon,
-    current: false,
+    tab: AdminTab,
   },
 ];
 
+const router = useRouter();
 const currentTab = ref(null);
 
 watchEffect(() => {
   const tab = subNavigation.find(
     (item) => item.href === router.currentRoute.value.path
   );
-  subNavigation.forEach((item) => (item.current = false));
   if (tab) {
-    tab.current = true;
-    changeTab(tab.name + "Tab");
+    currentTab.value = markRaw(tab.tab);
   } else {
     router.push("/settings/profile");
   }
 });
-
-// newTab: component name (string)
-function changeTab(newTab: string) {
-  const lookup: Record<string, any> = {
-    ProfileTab,
-    AccountTab,
-    AdminTab,
-  };
-  currentTab.value = markRaw(lookup[newTab]);
-}
 </script>
