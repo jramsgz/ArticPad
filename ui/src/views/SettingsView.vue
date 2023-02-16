@@ -49,7 +49,15 @@ import {
 } from "@heroicons/vue/24/outline";
 import { ProfileTab, AccountTab, AdminTab } from "@/components/settings";
 import { useRouter } from "vue-router";
-import { ref, markRaw, watchEffect } from "vue";
+import { ref, markRaw, watchEffect, inject } from "vue";
+import { axiosKey } from "@/plugins/keys";
+import type { AxiosInstance } from "axios";
+
+const axios = inject(axiosKey) as AxiosInstance;
+
+axios.get("/api/me").then((response) => {
+  console.log(response.data);
+});
 
 interface SubNavigationItem {
   name: string;
