@@ -30,8 +30,7 @@ archives:
     files:
       - README.md
       - LICENSE
-      - src: .env.sample
-        dst: config
+      - config/.env.sample
       - src: ui/dist/*
         dst: static
         strip_parent: true
@@ -51,7 +50,7 @@ dockers:
   - "--label=org.opencontainers.image.source={{.GitURL}}"
   - "--platform=linux/amd64"
   extra_files:
-  - .env.sample
+  - config/.env.sample
   - ui/dist
 - image_templates:
   - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-arm64'
@@ -67,7 +66,7 @@ dockers:
   - "--platform=linux/arm64"
   goarch: arm64
   extra_files:
-  - .env.sample
+  - config/.env.sample
   - ui/dist
 
 docker_manifests:

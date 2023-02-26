@@ -7,7 +7,7 @@ WORKDIR /production
 # Copy our compiled executable.
 COPY  articpad .
 # Copy our .env file.
-COPY .env.sample ./config/.env
+COPY config/.env.sample ./config/.env
 # Copy our static files.
 COPY ui/dist ./static
 
