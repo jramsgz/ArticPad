@@ -64,7 +64,7 @@ dockers:
   - "--platform=linux/arm64"
   goarch: arm64
   extra_files:
-  - env.sample
+  - .env.sample
   - ui/dist
 
 docker_manifests:
