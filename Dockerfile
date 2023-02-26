@@ -9,7 +9,7 @@ COPY  articpad .
 # Copy our .env file.
 COPY .env.sample ./config/.env
 # Copy our static files.
-COPY ./ui/dist ./static
+COPY ui/dist ./static
 
 # Run application and expose port 3000.
 EXPOSE 3000

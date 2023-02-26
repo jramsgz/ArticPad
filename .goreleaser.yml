@@ -49,6 +49,7 @@ dockers:
   - "--platform=linux/amd64"
   extra_files:
   - .env.sample
+  - ui/dist
 - image_templates:
   - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-arm64'
   dockerfile: Dockerfile
@@ -64,6 +65,7 @@ dockers:
   goarch: arm64
   extra_files:
   - env.sample
+  - ui/dist
 
 docker_manifests:
 - name_template: 'ghcr.io/jramsgz/articpad:{{ .Tag }}'
