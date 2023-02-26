@@ -15,7 +15,12 @@ import (
 
 func RegisterMiddlewares(app *fiber.App) {
 	app.Use(ErrorHandling())
-	app.Use(requestid.New())
+	app.Use(requestid.New(requestid.Config{
+		// Request ID disabled for static files (not prefixed with /api)
+		Next: func(c *fiber.Ctx) bool {
+			return c.Path() == "/api"
+		},
+	}))
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
 		MaxAge:       1800,

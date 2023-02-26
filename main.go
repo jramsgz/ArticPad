@@ -50,6 +50,10 @@ func main() {
 	app.Use(logger.New(logger.Config{
 		Format: "[${time}] ${locals:requestid} ${status} - ${latency} ${ip} ${method} ${path}\n",
 		Output: mw,
+		// Logs are disabled for requests to the static files (not prefixed with /api)
+		Next: func(c *fiber.Ctx) bool {
+			return c.Path() == "/api"
+		},
 	}))
 	log.SetOutput(mw)
 
