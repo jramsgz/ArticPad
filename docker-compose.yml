@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  articpad:
+    restart: unless-stopped
+    image: ghcr.io/jramsgz/articpad:latest
+    ports:
+      - 3000:3000
+    environment:
+      - API_USERID=1
+      - API_USERNAME=fiber
+      - API_PASSWORD=fiber
+      - JWT_SECRET=fiber
+    networks:
+      - application
+
+networks:
+  application:
