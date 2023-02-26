@@ -30,8 +30,11 @@ archives:
     files:
       - README.md
       - LICENSE
-      - .env.sample
-      - ui/dist
+      - src: .env.sample
+        dst: config
+      - src: ui/dist/*
+        dst: static
+        strip_parent: true
     rlcp: true
 
 dockers:
