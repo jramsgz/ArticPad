@@ -14,7 +14,9 @@ import (
 
 // RegisterMiddlewares register middlewares for the app
 func RegisterMiddlewares(app *fiber.App, logger zerolog.Logger) {
-	app.Use(Logger(logger, nil))
+	app.Use(Logger(logger, func(c *fiber.Ctx) bool {
+		return c.Path() == "/health" // skip logging for health check
+	}))
 	app.Use(cors.New(cors.Config{
 		MaxAge:       1800,
 		AllowOrigins: config.Config("APP_URL", "http://localhost:3000"),
