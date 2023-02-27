@@ -58,7 +58,8 @@ func Logger(log zerolog.Logger, filter func(*fiber.Ctx) bool) fiber.Handler {
 
 		// Only generate request id for non-static files
 		rid := "static"
-		if c.Path() == "/api" {
+		// Check if request path starts with /api
+		if len(c.Path()) >= 4 && c.Path()[:4] == "/api" {
 			rid = uuid.New().String()
 			c.Set(fiber.HeaderXRequestID, rid)
 		}
