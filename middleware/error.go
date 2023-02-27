@@ -29,7 +29,7 @@ func ErrorHandling() fiber.Handler {
 			// Send custom error page
 			return c.Status(code).JSON(fiber.Map{
 				"success":   false,
-				"message":   message,
+				"error":     message,
 				"requestId": c.Locals("requestid"),
 			})
 		}

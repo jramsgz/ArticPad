@@ -14,6 +14,14 @@ func SetupWebRoutes(app *fiber.App) {
 		MaxAge:   3600,
 	})
 
+	// Health check route
+	app.Get("/health", func(ctx *fiber.Ctx) error {
+		return ctx.Status(200).JSON(fiber.Map{
+			"success": true,
+			"message": "OK",
+		})
+	})
+
 	// Panic test route, this brings up an error
 	app.Get("/panic", func(ctx *fiber.Ctx) error {
 		panic("Hi, I'm a panic error!")
