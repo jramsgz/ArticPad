@@ -13,7 +13,7 @@ COPY ui/dist ./static
 
 # Add packages
 RUN apk -U upgrade \ 
-    && apk add --no-cache dumb-init curl ca-certificates
+    && apk add --no-cache dumb-init curl ca-certificates tzdata
 
 # Healthcheck
 HEALTHCHECK --start-period=10s --interval=10s --timeout=5s \

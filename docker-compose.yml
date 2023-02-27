@@ -10,6 +10,7 @@ services:
     # Change the environment variables to your needs
     # You can also use the .env file under /app/config
     environment:
+      - TZ=Etc/UTC
       - DB_HOST=localhost
       - DB_PORT=5432
       - DB_USER=postgres
