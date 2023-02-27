@@ -140,7 +140,7 @@ func Logger(log zerolog.Logger, filter func(*fiber.Ctx) bool) fiber.Handler {
 			case fields.StatusCode >= 500:
 				log.Error().EmbedObject(fields).Msg("server error")
 			case fields.StatusCode >= 400:
-				log.Error().EmbedObject(fields).Msg("client error")
+				log.Warn().EmbedObject(fields).Msg("client error")
 			case fields.StatusCode >= 300:
 				log.Warn().EmbedObject(fields).Msg("redirect")
 			case fields.StatusCode >= 200:
