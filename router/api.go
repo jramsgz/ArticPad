@@ -5,13 +5,12 @@ import (
 	"github.com/jramsgz/articpad/middleware"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 // SetupApiRoutes setup router for api
 func SetupApiRoutes(app *fiber.App) {
 	// Middleware
-	api := app.Group("/api", logger.New())
+	api := app.Group("/api")
 	apiv1 := api.Group("/v1")
 	apiv1.Get("/", handler.Hello)
 

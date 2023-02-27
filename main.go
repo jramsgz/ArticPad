@@ -45,6 +45,11 @@ func main() {
 	defer file.Close()
 	mw := io.MultiWriter(os.Stdout, file)
 
+	// Load .env file
+	if err := config.LoadEnv(); err != nil {
+		log.Fatal(err)
+	}
+
 	var isProduction bool = config.Config("DEBUG", "false") == "false"
 	// Set log level
 	var logLevel zerolog.Level = zerolog.DebugLevel
