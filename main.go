@@ -9,9 +9,9 @@ import (
 	"github.com/jramsgz/articpad/config"
 	"github.com/jramsgz/articpad/middleware"
 	"github.com/jramsgz/articpad/router"
+	"github.com/rs/zerolog"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 var (
@@ -26,48 +26,56 @@ var (
 	// go build -ldflags "-X main.Version=1.0.0 -X main.BuildTime=2020-01-01T00:00:00Z -X main.Commit=abcdef"
 )
 
+// App contains the "global" components that are
+// passed around.
+type App struct {
+	fiber  *fiber.App
+	logger zerolog.Logger
+}
+
 func main() {
-	var isProduction bool = config.Config("DEBUG", "false") == "false"
-
-	app := fiber.New(fiber.Config{
-		Prefork:               isProduction,
-		ServerHeader:          "ArticPad Server " + Version,
-		AppName:               "ArticPad",
-		DisableStartupMessage: isProduction,
-	})
-
-	// Logging
+	// MultiWriter to log to both console and file
 	if _, err := os.Stat("./logs"); os.IsNotExist(err) {
 		os.MkdirAll("./logs", 0755)
 	}
-	logFile, err := os.OpenFile("./logs/articpad.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile("./logs/articpad.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("error opening log file: %v", err)
+		log.Fatalf("Failed to open log file: %v", err)
 	}
-	defer logFile.Close()
+	defer file.Close()
+	mw := io.MultiWriter(os.Stdout, file)
 
-	mw := io.MultiWriter(os.Stdout, logFile)
-	app.Use(logger.New(logger.Config{
-		Format: "[${time}] ${locals:requestid} ${status} - ${latency} ${ip} ${method} ${path}\n",
-		Output: mw,
-		// Logs are disabled for requests to the static files (not prefixed with /api)
-		Next: func(c *fiber.Ctx) bool {
-			return c.Path() == "/api"
-		},
-	}))
-	log.SetOutput(mw)
+	var isProduction bool = config.Config("DEBUG", "false") == "false"
+	// Set log level
+	var logLevel zerolog.Level = zerolog.DebugLevel
+	desiredLevel, err := zerolog.ParseLevel(config.Config("LOG_LEVEL", "debug"))
+	if err == nil {
+		logLevel = desiredLevel
+	}
+
+	app := App{
+		fiber: fiber.New(fiber.Config{
+			Prefork:               isProduction,
+			ServerHeader:          "ArticPad Server " + Version,
+			AppName:               "ArticPad",
+			DisableStartupMessage: isProduction,
+		}),
+		logger: zerolog.New(mw).With().Timestamp().Logger().Level(logLevel),
+	}
 
 	// Middleware registration
-	middleware.RegisterMiddlewares(app)
+	middleware.RegisterMiddlewares(app.fiber, app.logger)
 
 	//database.ConnectDB()
 
-	router.SetupRoutes(app)
+	router.SetupRoutes(app.fiber)
 
 	if !fiber.IsChild() {
 		log.Printf("Starting ArticPad %s with isProduction: %t", Version, isProduction)
 		log.Printf("BuildTime: %s | Commit: %s", BuildTime, Commit)
 		log.Printf("Listening on %s", config.Config("APP_ADDR", ":3000"))
 	}
-	log.Fatal(app.Listen(config.Config("APP_ADDR", ":3000")))
+	if err := app.fiber.Listen(config.Config("APP_ADDR", ":3000")); err != nil {
+		app.logger.Fatal().Err(err).Msg("Error starting server")
+	}
 }

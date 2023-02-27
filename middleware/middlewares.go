@@ -7,21 +7,14 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/fiber/v2/utils"
 	"github.com/jramsgz/articpad/config"
+	"github.com/rs/zerolog"
 )
 
-func RegisterMiddlewares(app *fiber.App) {
-	app.Use(ErrorHandling())
-	app.Use(requestid.New(requestid.Config{
-		// Request ID disabled for static files (not prefixed with /api)
-		Next: func(c *fiber.Ctx) bool {
-			return c.Path() == "/api"
-		},
-	}))
-	app.Use(recover.New())
+// RegisterMiddlewares register middlewares for the app
+func RegisterMiddlewares(app *fiber.App, logger zerolog.Logger) {
+	app.Use(Logger(logger, nil))
 	app.Use(cors.New(cors.Config{
 		MaxAge:       1800,
 		AllowOrigins: config.Config("APP_URL", "http://localhost:3000"),
