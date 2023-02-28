@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jramsgz/articpad/config"
@@ -58,12 +59,21 @@ func main() {
 		logLevel = desiredLevel
 	}
 
+	// Set trusted proxies
+	var trustedProxies []string
+	if config.Config("TRUSTED_PROXIES", "") != "" {
+		trustedProxies = strings.Split(config.Config("TRUSTED_PROXIES", ""), ",")
+	}
+	var enableProxy bool = len(trustedProxies) > 0
+	// App initialization
 	app := App{
 		fiber: fiber.New(fiber.Config{
-			Prefork:               isProduction,
-			ServerHeader:          "ArticPad Server " + Version,
-			AppName:               "ArticPad",
-			DisableStartupMessage: isProduction,
+			Prefork:                 isProduction,
+			ServerHeader:            "ArticPad Server " + Version,
+			AppName:                 "ArticPad",
+			DisableStartupMessage:   isProduction,
+			EnableTrustedProxyCheck: enableProxy,
+			TrustedProxies:          trustedProxies,
 		}),
 		logger: zerolog.New(mw).With().Timestamp().Logger().Level(logLevel),
 	}
