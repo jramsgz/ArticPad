@@ -15,7 +15,7 @@ func RegisterMiddlewares(app *fiber.App, logger zerolog.Logger) {
 	}))
 	app.Use(cors.New(cors.Config{
 		MaxAge:       1800,
-		AllowOrigins: config.Config("APP_URL", "http://localhost:3000"),
+		AllowOrigins: config.GetString("APP_URL", "http://localhost:3000"),
 	}))
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed, // 1

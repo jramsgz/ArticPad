@@ -9,7 +9,7 @@ import (
 func SetupWebRoutes(app *fiber.App) {
 	// Serve Single Page application on "/"
 	// assume static file at static folder
-	app.Static("/", config.Config("STATIC_DIR", "static"), fiber.Static{
+	app.Static("/", config.GetString("STATIC_DIR", "static"), fiber.Static{
 		Compress: true,
 		MaxAge:   3600,
 	})
@@ -28,6 +28,6 @@ func SetupWebRoutes(app *fiber.App) {
 	})
 
 	app.Get("/*", func(ctx *fiber.Ctx) error {
-		return ctx.SendFile("./" + config.Config("STATIC_DIR", "static") + "/index.html")
+		return ctx.SendFile("./" + config.GetString("STATIC_DIR", "static") + "/index.html")
 	})
 }

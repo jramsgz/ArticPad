@@ -119,7 +119,7 @@ func Login(c *fiber.Ctx) error {
 	claims["user_id"] = ud.ID
 	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
 
-	t, err := token.SignedString([]byte(config.Config("SECRET", "secret")))
+	t, err := token.SignedString([]byte(config.GetString("SECRET", "MyRandomSecureSecret")))
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}

@@ -51,20 +51,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var isProduction bool = config.Config("DEBUG", "false") == "false"
+	var isProduction bool = config.GetString("DEBUG", "false") == "false"
 	// Set log level
 	var logLevel zerolog.Level = zerolog.DebugLevel
-	desiredLevel, err := zerolog.ParseLevel(config.Config("LOG_LEVEL", "debug"))
+	desiredLevel, err := zerolog.ParseLevel(config.GetString("LOG_LEVEL", "debug"))
 	if err == nil {
 		logLevel = desiredLevel
 	}
 
 	// Set trusted proxies
 	var trustedProxies []string
-	if config.Config("TRUSTED_PROXIES", "") != "" {
-		trustedProxies = strings.Split(config.Config("TRUSTED_PROXIES", ""), ",")
+	if config.GetString("TRUSTED_PROXIES", "") != "" {
+		trustedProxies = strings.Split(config.GetString("TRUSTED_PROXIES", ""), ",")
 	}
 	var enableProxy bool = len(trustedProxies) > 0
+
 	// App initialization
 	app := App{
 		fiber: fiber.New(fiber.Config{
@@ -81,16 +82,15 @@ func main() {
 	// Middleware registration
 	middleware.RegisterMiddlewares(app.fiber, app.logger)
 
-	//database.ConnectDB()
-
+	// Route registration
 	router.SetupRoutes(app.fiber)
 
 	if !fiber.IsChild() {
 		log.Printf("Starting ArticPad %s with isProduction: %t", Version, isProduction)
 		log.Printf("BuildTime: %s | Commit: %s", BuildTime, Commit)
-		log.Printf("Listening on %s", config.Config("APP_ADDR", ":3000"))
+		log.Printf("Listening on %s", config.GetString("APP_ADDR", ":3000"))
 	}
-	if err := app.fiber.Listen(config.Config("APP_ADDR", ":3000")); err != nil {
+	if err := app.fiber.Listen(config.GetString("APP_ADDR", ":3000")); err != nil {
 		app.logger.Fatal().Err(err).Msg("Error starting server")
 	}
 }
