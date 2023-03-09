@@ -8,5 +8,6 @@ type User struct {
 	Username string `gorm:"uniqueIndex;not null" json:"username"`
 	Email    string `gorm:"uniqueIndex;not null" json:"email"`
 	Password string `gorm:"not null" json:"password"`
-	Names    string `json:"names"`
+	Verified bool   `gorm:"not null" json:"verified"`
+	IsAdmin  bool   `gorm:"not null" json:"isAdmin"`
 }

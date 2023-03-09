@@ -19,3 +19,6 @@
 
 # ArticPad logs
 logs
+
+# DB data
+*.db

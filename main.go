@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/jramsgz/articpad/config"
+	"github.com/jramsgz/articpad/database"
 	"github.com/jramsgz/articpad/middleware"
+	"github.com/jramsgz/articpad/model"
 	"github.com/jramsgz/articpad/router"
 	"github.com/rs/zerolog"
 
@@ -32,6 +34,7 @@ var (
 type App struct {
 	fiber  *fiber.App
 	logger zerolog.Logger
+	DB     *database.Database
 }
 
 func main() {
@@ -79,11 +82,39 @@ func main() {
 		logger: zerolog.New(mw).With().Timestamp().Logger().Level(logLevel),
 	}
 
+	// Database initialization
+	db, err := database.New(&database.DatabaseConfig{
+		Driver:   config.GetString("DB_DRIVER", "sqlite"),
+		Host:     config.GetString("DB_HOST", "localhost"),
+		Username: config.GetString("DB_USERNAME", "root"),
+		Password: config.GetString("DB_PASSWORD", ""),
+		Port:     config.GetInt("DB_PORT", 3306),
+		Database: config.GetString("DB_DATABASE", "config/articpad.db"),
+	})
+
+	// Auto-migrate database models
+	if !fiber.IsChild() {
+		if err != nil {
+			log.Fatal("failed to connect to database:", err.Error())
+		} else {
+			if db == nil {
+				log.Fatal("failed to connect to database: db is nil")
+			} else {
+				app.DB = db
+				err := app.DB.AutoMigrate(&model.User{})
+				if err != nil {
+					log.Fatal("failed to automigrate models:", err.Error())
+					return
+				}
+			}
+		}
+	}
+
 	// Middleware registration
 	middleware.RegisterMiddlewares(app.fiber, app.logger)
 
 	// Route registration
-	router.SetupRoutes(app.fiber)
+	router.SetupRoutes(app.fiber, app.logger, app.DB)
 
 	if !fiber.IsChild() {
 		log.Printf("Starting ArticPad %s with isProduction: %t", Version, isProduction)
