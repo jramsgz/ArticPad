@@ -10,7 +10,7 @@ before:
 
 builds:
   - binary: articpad
-    main: main.go
+    main: cmd/articpad/main.go
     goos:
       - windows
       - darwin
@@ -20,7 +20,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X "main.Version={{ .Tag }}" -X "main.Commit={{ .ShortCommit }}" -X "main.BuildTime={{ .Date }}"
+      - -s -w -X "config.Version={{ .Tag }}" -X "config.Commit={{ .ShortCommit }}" -X "config.BuildTime={{ .Date }}"
 
 archives:
   - format: tar.gz
