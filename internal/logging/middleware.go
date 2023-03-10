@@ -1,4 +1,4 @@
-package middleware
+package logging
 
 import (
 	"fmt"
@@ -99,7 +99,6 @@ func Logger(log zerolog.Logger, filter func(*fiber.Ctx) bool) fiber.Handler {
 				}
 
 				fields.Error = err
-				fields.Stack = debug.Stack()
 
 				// Send custom error page
 				c.Status(code).JSON(fiber.Map{

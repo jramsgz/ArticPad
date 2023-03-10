@@ -1,4 +1,4 @@
-package database
+package infrastructure
 
 import (
 	"fmt"
@@ -18,11 +18,7 @@ type DatabaseConfig struct {
 	Database string
 }
 
-type Database struct {
-	*gorm.DB
-}
-
-func New(config *DatabaseConfig) (*Database, error) {
+func ConnectToDB(config *DatabaseConfig) (*gorm.DB, error) {
 	var db *gorm.DB
 	var err error
 	switch strings.ToLower(config.Driver) {
@@ -34,5 +30,5 @@ func New(config *DatabaseConfig) (*Database, error) {
 		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		break
 	}
-	return &Database{db}, err
+	return db, err
 }

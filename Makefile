@@ -46,7 +46,7 @@ build-no-cache:
 .PHONY: up-silent
 up-silent:
 	make delete-container-if-exist
-	docker run -d -p 3000:3000 --name $(project_name) $(image_name)
+	docker run -d -p 8080:8080 --name $(project_name) $(image_name)
 
 .PHONY: delete-container-if-exist
 delete-container-if-exist:

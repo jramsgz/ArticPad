@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     image: ghcr.io/jramsgz/articpad:latest
     ports:
-      - 3000:3000
+      - 8080:8080
     # Change the environment variables to your needs
     # You can also use the .env file under /app/config
     environment:
@@ -17,7 +17,7 @@ services:
       - DB_PASSWORD=
       - DB_NAME=articpad
       - LOG_LEVEL=warn
-      - APP_URL=http://localhost:3000
+      - APP_URL=http://localhost:8080
       - APP_SECRET=RandomSecretJWTKey
     volumes:
       - "config:/app/config"

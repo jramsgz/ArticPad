@@ -17,9 +17,9 @@ RUN apk -U upgrade \
 
 # Healthcheck
 HEALTHCHECK --start-period=10s --interval=10s --timeout=5s \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:8080/health || exit 1
 
-# Run application and expose port 3000.
-EXPOSE 3000
+# Run application and expose port 8080.
+EXPOSE 8080
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["./articpad"]
