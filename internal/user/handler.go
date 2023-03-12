@@ -20,7 +20,6 @@ func NewUserHandler(userRoute fiber.Router, us UserService) {
 	}
 
 	// We will restrict this route with our JWT middleware.
-	// You can inject other middlewares if you see fit here.
 	userRoute.Use(auth.JWTMiddleware(), auth.GetDataFromJWT)
 
 	// Declare routing endpoints for general routes.

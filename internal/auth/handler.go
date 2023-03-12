@@ -11,17 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// CheckPasswordHash compare password with hash
-func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
-
-func valid(email string) bool {
-	_, err := mail.ParseAddress(email)
-	return err == nil
-}
-
 // Create an authentication handler. Leave this empty, as we have no domains nor use-cases.
 type AuthHandler struct{}
 
@@ -31,14 +20,27 @@ func NewAuthHandler(authRoute fiber.Router) {
 
 	// Declare routing for specific routes.
 	authRoute.Post("/login", handler.signInUser)
+	authRoute.Get("/refresh", JWTMiddleware(), handler.refreshToken)
 	authRoute.Get("/private", JWTMiddleware(), handler.privateRoute)
+}
+
+// CheckPasswordHash compare password with hash
+func (h *AuthHandler) checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+// Checks if an email is valid.
+func (h *AuthHandler) valid(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil
 }
 
 // Signs in a user and gives them a JWT.
 func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	// Create a struct so the request body can be mapped here.
 	type loginRequest struct {
-		Username string `json:"username"`
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
@@ -56,7 +58,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	}
 
 	// If both username and password are incorrect, do not allow access.
-	if request.Username != os.Getenv("API_USERNAME") || request.Password != os.Getenv("API_PASSWORD") {
+	if request.Email != os.Getenv("API_USERNAME") || request.Password != os.Getenv("API_PASSWORD") {
 		return fiber.NewError(fiber.StatusUnauthorized, "Wrong username or password!")
 	}
 
@@ -77,8 +79,45 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 
 	// Send response.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
-		"status": "success",
-		"token":  signedToken,
+		"success": true,
+		"token":   signedToken,
+	})
+}
+
+// Refreshes a JWT.
+func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
+	// Create a struct for our custom JWT payload.
+	type jwtClaims struct {
+		UserID string `json:"uid"`
+		User   string `json:"user"`
+		jwt.StandardClaims
+	}
+
+	// Get JWT data.
+	jwtData := c.Locals("user").(*jwt.Token)
+	claims := jwtData.Claims.(jwt.MapClaims)
+
+	// Create a new JWT.
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
+		claims["uid"].(string),
+		claims["user"].(string),
+		jwt.StandardClaims{
+			Audience:  "articpad-users",
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+			Issuer:    "articpad-api",
+		},
+	})
+
+	// Sign the new JWT.
+	signedToken, err := token.SignedString([]byte(config.GetString("SECRET", "MyRandomSecureSecret")))
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	// Send response.
+	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"success": true,
+		"token":   signedToken,
 	})
 }
 
@@ -107,7 +146,7 @@ func (h *AuthHandler) privateRoute(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
-		"status":  "success",
+		"success": true,
 		"message": "Welcome to the private route!",
 		"jwtData": jwtResp,
 	})
