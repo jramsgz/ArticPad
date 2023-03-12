@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jramsgz/articpad/internal/auth"
 )
 
 // Represents our handler with our use-case / service.
@@ -17,6 +18,10 @@ func NewUserHandler(userRoute fiber.Router, us UserService) {
 	handler := &UserHandler{
 		userService: us,
 	}
+
+	// We will restrict this route with our JWT middleware.
+	// You can inject other middlewares if you see fit here.
+	userRoute.Use(auth.JWTMiddleware(), auth.GetDataFromJWT)
 
 	// Declare routing endpoints for general routes.
 	userRoute.Get("", handler.getUsers)
@@ -37,10 +42,7 @@ func (h *UserHandler) getUsers(c *fiber.Ctx) error {
 	// Get all users.
 	users, err := h.userService.GetUsers(customContext)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Return results.
@@ -59,19 +61,13 @@ func (h *UserHandler) getUser(c *fiber.Ctx) error {
 	// Fetch parameter.
 	targetedUserID, err := c.ParamsInt("userID")
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": "Please specify a valid user ID!",
-		})
+		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid user ID!")
 	}
 
 	// Get one user.
 	user, err := h.userService.GetUser(customContext, targetedUserID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Return results.
@@ -92,19 +88,13 @@ func (h *UserHandler) createUser(c *fiber.Ctx) error {
 
 	// Parse request body.
 	if err := c.BodyParser(user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	// Create one user.
 	err := h.userService.CreateUser(customContext, user)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Return result.
@@ -126,19 +116,13 @@ func (h *UserHandler) updateUser(c *fiber.Ctx) error {
 
 	// Parse request body.
 	if err := c.BodyParser(user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	// Update one user.
 	err := h.userService.UpdateUser(customContext, targetedUserID, user)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Return result.
@@ -160,10 +144,7 @@ func (h *UserHandler) deleteUser(c *fiber.Ctx) error {
 	// Delete one user.
 	err := h.userService.DeleteUser(customContext, targetedUserID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Return 204 No Content.

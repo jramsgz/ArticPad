@@ -93,7 +93,8 @@ func Logger(log zerolog.Logger, filter func(*fiber.Ctx) bool) fiber.Handler {
 				if e, ok := err.(*fiber.Error); ok {
 					// Override status code if fiber.Error type
 					code = e.Code
-					if !isProduction {
+					// If the error is not a server error, send the error message to the client
+					if !isProduction || (code >= 400 && code < 500) {
 						message = e.Message
 					}
 				}

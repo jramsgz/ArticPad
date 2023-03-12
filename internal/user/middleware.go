@@ -15,25 +15,16 @@ func (h *UserHandler) checkIfUserExistsMiddleware(c *fiber.Ctx) error {
 	// Fetch parameter.
 	targetedUserID, err := c.ParamsInt("userID")
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": "Please specify a valid user ID!",
-		})
+		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid user ID!")
 	}
 
 	// Check if user exists.
 	searchedUser, err := h.userService.GetUser(customContext, targetedUserID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	if searchedUser == nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": "There is no user with this ID!",
-		})
+		return fiber.NewError(fiber.StatusBadRequest, "There is no user with this ID!")
 	}
 
 	// Store in locals for further processing in the real handler.

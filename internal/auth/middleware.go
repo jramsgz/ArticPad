@@ -21,11 +21,9 @@ func JWTMiddleware() fiber.Handler {
 // JWT error message.
 func jwtError(c *fiber.Ctx, err error) error {
 	if err.Error() == "Missing or malformed JWT" {
-		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"success": false, "error": "Missing or malformed JWT", "data": nil})
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	return c.Status(fiber.StatusUnauthorized).
-		JSON(fiber.Map{"success": false, "error": "Invalid or expired JWT", "data": nil})
+	return fiber.NewError(fiber.StatusBadRequest, "Invalid or expired JWT")
 }
 
 // Gets user data (their ID) from the JWT middleware. Should be executed after calling 'JWTMiddleware()'.
@@ -36,10 +34,7 @@ func GetDataFromJWT(c *fiber.Ctx) error {
 	parsedUserID := claims["uid"].(string)
 	userID, err := strconv.Atoi(parsedUserID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"status":  "fail",
-			"message": err.Error(),
-		})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Go to next.

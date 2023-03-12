@@ -103,10 +103,7 @@ func Run() {
 	app.Use(limiter.New(limiter.Config{
 		Max: 100,
 		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusTooManyRequests).JSON(&fiber.Map{
-				"status":  "fail",
-				"message": "You have requested too many in a single time-frame! Please wait another minute!",
-			})
+			return fiber.NewError(fiber.StatusTooManyRequests, "You have exceeded the maximum number of requests. Please try again later.")
 		},
 	}))
 
