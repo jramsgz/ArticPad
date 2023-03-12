@@ -1,14 +1,41 @@
 package user
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 // Represents the 'User' object.
 type User struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Address  string `json:"address"`
-	Created  int64  `json:"created"`
-	Modified int64  `json:"modified"`
+	ID        uuid.UUID      `json:"ID" gorm:"primaryKey;type:uuid"`
+	Username  string         `gorm:"uniqueIndex;not null" json:"username"`
+	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
+	Password  string         `gorm:"not null" json:"password"`
+	Verified  bool           `gorm:"not null" json:"verified"`
+	Admin     bool           `gorm:"not null" json:"admin"`
+	CreatedAt time.Time      `json:"createdAt"`
+	UpdatedAt time.Time      `json:"updatedAt"`
+	DeletedAt gorm.DeletedAt `json:"deletedAt" gorm:"index"`
+}
+
+// BeforeCreate will set default values for the user.
+func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
+	// UUID version 4
+	user.ID = uuid.New()
+	// Set the created and updated times.
+	now := time.Now()
+	user.CreatedAt = now
+	user.UpdatedAt = now
+	return
+}
+
+// BeforeUpdate will set default values for the user.
+func (user *User) BeforeUpdate(tx *gorm.DB) (err error) {
+	user.UpdatedAt = time.Now()
+	return
 }
 
 // Our repository will implement these methods.
