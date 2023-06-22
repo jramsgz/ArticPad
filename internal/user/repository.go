@@ -48,6 +48,36 @@ func (r *dbRepository) GetUser(ctx context.Context, userID int) (*User, error) {
 	return user, nil
 }
 
+// Gets a single user in the database by email.
+func (r *dbRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	// Initialize variable.
+	user := &User{}
+
+	// Prepare SQL to get one user.
+	result := r.db.WithContext(ctx).Where("email = ?", email).First(user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Return result.
+	return user, nil
+}
+
+// Gets a single user in the database by username.
+func (r *dbRepository) GetUserByUsername(ctx context.Context, username string) (*User, error) {
+	// Initialize variable.
+	user := &User{}
+
+	// Prepare SQL to get one user.
+	result := r.db.WithContext(ctx).Where("username = ?", username).First(user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Return result.
+	return user, nil
+}
+
 // Creates a single user in the database.
 func (r *dbRepository) CreateUser(ctx context.Context, user *User) error {
 	// Insert one user.

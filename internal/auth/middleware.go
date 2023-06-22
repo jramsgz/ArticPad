@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/jramsgz/articpad/config"
@@ -39,5 +40,31 @@ func GetDataFromJWT(c *fiber.Ctx) error {
 
 	// Go to next.
 	c.Locals("currentUser", userID)
+	return c.Next()
+}
+
+// If user does not exist, do not allow one to access the API.
+func (h *AuthHandler) checkIfUserExistsMiddleware(c *fiber.Ctx) error {
+	// Create a new customized context.
+	customContext, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Fetch parameter.
+	targetedUserEmail := c.Params("email")
+	if h.validEmail(targetedUserEmail) == false {
+		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid email!")
+	}
+
+	// Check if user exists.
+	searchedUser, err := h.userService.GetUserByEmail(customContext, targetedUserEmail)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	if searchedUser == nil {
+		return fiber.NewError(fiber.StatusBadRequest, "There is no user with this email!")
+	}
+
+	// Store in locals for further processing in the real handler.
+	c.Locals("userID", searchedUser.ID)
 	return c.Next()
 }

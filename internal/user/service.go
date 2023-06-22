@@ -27,6 +27,16 @@ func (s *userService) GetUser(ctx context.Context, userID int) (*User, error) {
 	return s.userRepository.GetUser(ctx, userID)
 }
 
+// Implementation of 'GetUserByEmail'.
+func (s *userService) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	return s.userRepository.GetUserByEmail(ctx, email)
+}
+
+// Implementation of 'GetUserByUsername'.
+func (s *userService) GetUserByUsername(ctx context.Context, userName string) (*User, error) {
+	return s.userRepository.GetUserByUsername(ctx, userName)
+}
+
 // Implementation of 'CreateUser'.
 func (s *userService) CreateUser(ctx context.Context, user *User) error {
 	// Set default value of 'CreatedAt' and 'UpdatedAt'.

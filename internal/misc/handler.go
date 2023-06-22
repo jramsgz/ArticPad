@@ -6,17 +6,17 @@ import "github.com/gofiber/fiber/v2"
 type MiscHandler struct{}
 
 // Represents a new handler.
-func NewMiscHandler(healthRoute fiber.Router) {
+func NewMiscHandler(miscRoute fiber.Router) {
 	handler := &MiscHandler{}
 
 	// Declare routing.
-	healthRoute.Get("", handler.defaultResponse)
+	miscRoute.Get("", handler.defaultResponse)
 }
 
 // Defeault API response.
 func (h *MiscHandler) defaultResponse(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "Welcome to the API!",
+		"message": "Welcome to the ArticPad API! Visit the project repository for documentation",
 	})
 }

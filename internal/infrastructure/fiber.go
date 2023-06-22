@@ -1,7 +1,6 @@
 package infrastructure
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -18,6 +17,7 @@ import (
 	"github.com/jramsgz/articpad/internal/auth"
 	"github.com/jramsgz/articpad/internal/health"
 	"github.com/jramsgz/articpad/internal/logging"
+	"github.com/jramsgz/articpad/internal/mailer"
 	"github.com/jramsgz/articpad/internal/misc"
 	"github.com/jramsgz/articpad/internal/user"
 )
@@ -45,7 +45,19 @@ func Run() {
 		Database: config.GetString("DB_DATABASE", "config/articpad.db"),
 	})
 	if err != nil || db == nil {
-		log.Fatal("Database connection error: $s", err)
+		logger.Fatal().Msgf("Database connection error: %s", err)
+	}
+
+	// Connect to mail server.
+	mail, err := mailer.ConnectToMailer(&mailer.MailConfig{
+		Host:     config.GetString("MAIL_HOST", "localhost"),
+		Port:     config.GetInt("MAIL_PORT", 25),
+		Username: config.GetString("MAIL_USERNAME", ""),
+		Password: config.GetString("MAIL_PASSWORD", ""),
+		From:     config.GetString("MAIL_FROM", "ArticPad <"+config.GetString("MAIL_USERNAME", "")+">"),
+	})
+	if err != nil || mail == nil {
+		logger.Fatal().Msgf("Mail server connection error: %s", err)
 	}
 
 	// Set trusted proxies
@@ -73,7 +85,6 @@ func Run() {
 
 	go func() {
 		_ = <-c
-		fmt.Println("Gracefully shutting down...")
 		serverShutdown.Add(1)
 		defer serverShutdown.Done()
 		_ = app.ShutdownWithTimeout(60 * time.Second)
@@ -83,7 +94,7 @@ func Run() {
 		// Auto-migrate database models
 		err := db.AutoMigrate(&user.User{})
 		if err != nil {
-			log.Fatal("failed to automigrate models:", err.Error())
+			logger.Fatal().Msgf("failed to automigrate models: %s", err.Error())
 			return
 		}
 	}
@@ -101,6 +112,7 @@ func Run() {
 	}))
 	app.Use(etag.New())
 	app.Use(limiter.New(limiter.Config{
+		// TODO: Make this configurable and enable it for auth routes. Also fix that every fork has its own counter by using redis or something.
 		Max: 100,
 		LimitReached: func(c *fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusTooManyRequests, "You have exceeded the maximum number of requests. Please try again later.")
@@ -108,11 +120,9 @@ func Run() {
 	}))
 
 	// Create repositories.
-	//cityRepository := city.NewCityRepository(db)
 	userRepository := user.NewUserRepository(db)
 
 	// Create all of our services.
-	//cityService := city.NewCityService(cityRepository)
 	userService := user.NewUserService(userRepository)
 
 	// Prepare our endpoints for the API.
@@ -121,9 +131,8 @@ func Run() {
 
 	misc.NewMiscHandler(apiv1)
 	health.NewHealthHandler(app.Group("/health"))
-	auth.NewAuthHandler(apiv1.Group("/auth"))
-	//city.NewCityHandler(apiv1.Group("/cities"), cityService)
-	user.NewUserHandler(apiv1.Group("/users"), userService)
+	auth.NewAuthHandler(apiv1.Group("/auth"), userService, mail)
+	//user.NewUserHandler(apiv1.Group("/users"), userService)
 
 	// Prepare an endpoint for 'Not Found'.
 	api.All("*", func(c *fiber.Ctx) error {
@@ -141,6 +150,7 @@ func Run() {
 	})
 
 	// Panic test route, this brings up an error
+	// TODO: Remove this route in production
 	app.Get("/panic", func(ctx *fiber.Ctx) error {
 		panic("Hi, I'm a panic error!")
 	})
@@ -150,9 +160,9 @@ func Run() {
 	})
 
 	if !fiber.IsChild() {
-		log.Printf("Starting ArticPad %s with isProduction: %t", config.Version, isProduction)
-		log.Printf("BuildTime: %s | Commit: %s", config.BuildTime, config.Commit)
-		log.Printf("Listening on %s", config.GetString("APP_ADDR", ":8080"))
+		logger.Info().Msgf("Starting ArticPad %s with isProduction: %t", config.Version, isProduction)
+		logger.Info().Msgf("BuildTime: %s | Commit: %s", config.BuildTime, config.Commit)
+		logger.Info().Msgf("Listening on %s", config.GetString("APP_ADDR", ":8080"))
 	}
 	if err := app.Listen(config.GetString("APP_ADDR", ":8080")); err != nil {
 		logger.Fatal().Err(err).Msg("Error starting server")
@@ -161,7 +171,7 @@ func Run() {
 	if !fiber.IsChild() {
 		serverShutdown.Wait()
 
-		fmt.Println("Running cleanup tasks...")
+		logger.Info().Msg("Shutting down server...")
 		_ = logFile.Close()
 	}
 }
