@@ -61,3 +61,13 @@ func (s *userService) UpdateUser(ctx context.Context, userID int, user *User) er
 func (s *userService) DeleteUser(ctx context.Context, userID int) error {
 	return s.userRepository.DeleteUser(ctx, userID)
 }
+
+// Implementation of 'IsFirstUser'.
+func (s *userService) IsFirstUser(ctx context.Context) (bool, error) {
+	_, err := s.userRepository.GetFirstUser(ctx)
+	if err != nil && err.Error() == "record not found" {
+		return true, nil
+	}
+
+	return false, err
+}

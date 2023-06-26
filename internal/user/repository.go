@@ -113,3 +113,18 @@ func (r *dbRepository) DeleteUser(ctx context.Context, userID int) error {
 	// Return empty.
 	return nil
 }
+
+// Gets the first user in the database.
+func (r *dbRepository) GetFirstUser(ctx context.Context) (*User, error) {
+	// Initialize variable.
+	user := &User{}
+
+	// Prepare SQL to get one user.
+	result := r.db.WithContext(ctx).First(user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Return result.
+	return user, nil
+}

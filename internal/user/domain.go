@@ -47,6 +47,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *User) error
 	UpdateUser(ctx context.Context, userID int, user *User) error
 	DeleteUser(ctx context.Context, userID int) error
+	GetFirstUser(ctx context.Context) (*User, error)
 }
 
 // Our use-case or service will implement these methods.
@@ -58,4 +59,5 @@ type UserService interface {
 	CreateUser(ctx context.Context, user *User) error
 	UpdateUser(ctx context.Context, userID int, user *User) error
 	DeleteUser(ctx context.Context, userID int) error
+	IsFirstUser(ctx context.Context) (bool, error)
 }

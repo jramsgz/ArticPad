@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"net/mail"
 	"strconv"
 
 	"github.com/jramsgz/articpad/config"
@@ -51,12 +52,13 @@ func (h *AuthHandler) checkIfUserExistsMiddleware(c *fiber.Ctx) error {
 
 	// Fetch parameter.
 	targetedUserEmail := c.Params("email")
-	if h.validEmail(targetedUserEmail) == false {
-		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid email!")
+	parsedEmail, err := mail.ParseAddress(targetedUserEmail)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid email address")
 	}
 
 	// Check if user exists.
-	searchedUser, err := h.userService.GetUserByEmail(customContext, targetedUserEmail)
+	searchedUser, err := h.userService.GetUserByEmail(customContext, parsedEmail.Address)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
