@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -127,4 +129,34 @@ func (r *dbRepository) GetFirstUser(ctx context.Context) (*User, error) {
 
 	// Return result.
 	return user, nil
+}
+
+// Verifies a user given its verification token.
+func (r *dbRepository) VerifyUser(ctx context.Context, verificationToken string) error {
+	// Initialize variable.
+	user := &User{}
+
+	// Prepare SQL to get one user.
+	result := r.db.WithContext(ctx).Where("verification_token = ?", verificationToken).First(user)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Check if user is already verified.
+	if user.VerifiedAt != nil {
+		return errors.New("user is already verified")
+	}
+
+	// Update user.
+	t := time.Now()
+	user.VerifiedAt = &t
+
+	// Save user.
+	result = r.db.WithContext(ctx).Save(user)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Return empty.
+	return nil
 }

@@ -10,15 +10,17 @@ import (
 
 // Represents the 'User' object.
 type User struct {
-	ID        uuid.UUID      `json:"ID" gorm:"primaryKey;type:uuid"`
-	Username  string         `gorm:"uniqueIndex;not null" json:"username"`
-	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
-	Password  string         `gorm:"not null" json:"password"`
-	Verified  bool           `gorm:"not null" json:"verified"`
-	Admin     bool           `gorm:"not null" json:"admin"`
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `json:"deletedAt" gorm:"index"`
+	ID                 uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid"`
+	Username           string         `gorm:"uniqueIndex;not null" json:"username"`
+	Email              string         `gorm:"uniqueIndex;not null" json:"email"`
+	Password           string         `gorm:"not null" json:"password"`
+	VerifiedAt         *time.Time     `json:"verified_at"`
+	VerificationToken  string         `gorm:"uniqueIndex;not null" json:"verification_token"`
+	PasswordResetToken string         `json:"password_reset_token"`
+	IsAdmin            bool           `gorm:"not null" json:"is_admin"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+	DeletedAt          gorm.DeletedAt `json:"deleted_at" gorm:"index"`
 }
 
 // BeforeCreate will set default values for the user.
@@ -48,6 +50,7 @@ type UserRepository interface {
 	UpdateUser(ctx context.Context, userID int, user *User) error
 	DeleteUser(ctx context.Context, userID int) error
 	GetFirstUser(ctx context.Context) (*User, error)
+	VerifyUser(ctx context.Context, verificationToken string) error
 }
 
 // Our use-case or service will implement these methods.
@@ -60,4 +63,6 @@ type UserService interface {
 	UpdateUser(ctx context.Context, userID int, user *User) error
 	DeleteUser(ctx context.Context, userID int) error
 	IsFirstUser(ctx context.Context) (bool, error)
+	GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*User, error)
+	VerifyUser(ctx context.Context, verificationToken string) error
 }

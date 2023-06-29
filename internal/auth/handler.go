@@ -2,16 +2,20 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/mail"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"github.com/jramsgz/articpad/config"
 	"github.com/jramsgz/articpad/internal/mailer"
 	"github.com/jramsgz/articpad/internal/user"
+	"github.com/jramsgz/articpad/internal/utils/validator"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // Create an authentication handler.
@@ -30,23 +34,18 @@ func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailer.Ma
 	// Declare routing for specific routes.
 	authRoute.Post("/login", handler.signInUser)
 	authRoute.Post("/register", handler.signUpUser)
-	authRoute.Post("/logout", JWTMiddleware(), handler.logOutUser)   // TODO
-	authRoute.Get("/verify", handler.verifyUser)                     // TODO
+	authRoute.Post("/logout", JWTMiddleware(), handler.logOutUser) // TODO
+	authRoute.Post("/resend", handler.resendVerificationEmail)
+	authRoute.Get("/verify/:token", handler.verifyUser)
 	authRoute.Post("/forgot", handler.forgotPassword)                // TODO
 	authRoute.Get("/reset", handler.resetPassword)                   // TODO
 	authRoute.Get("/refresh", JWTMiddleware(), handler.refreshToken) // TODO
 	authRoute.Get("/me", JWTMiddleware(), handler.getMe)             // TODO
 }
 
-// CheckPasswordHash compare password with hash
+// checkPasswordHash compare password with hash
 func (h *AuthHandler) checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
-
-// Checks if an email is valid.
-func (h *AuthHandler) validEmail(email string) bool {
-	_, err := mail.ParseAddress(email)
 	return err == nil
 }
 
@@ -54,7 +53,7 @@ func (h *AuthHandler) validEmail(email string) bool {
 func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	// Create a struct so the request body can be mapped here.
 	type loginRequest struct {
-		Email    string `json:"email"`
+		Login    string `json:"login"`
 		Password string `json:"password"`
 	}
 
@@ -62,7 +61,8 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	type jwtClaims struct {
 		UserID string `json:"uid"`
 		User   string `json:"user"`
-		jwt.StandardClaims
+		UserIP string `json:"user_ip"`
+		jwt.RegisteredClaims
 	}
 
 	// Create cancellable context.
@@ -75,30 +75,23 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	// Check if email is valid.
-	if h.validEmail(request.Email) == false {
-		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid email!")
+	// Get user by username from database.
+	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, "incorrect email, username or password")
+	} else if err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
 	}
 
-	// Get user from database.
-	user, err := h.userService.GetUserByEmail(customContext, request.Email)
-	if err != nil {
-		// If the user does not exist, do not allow access.
-		if err.Error() == "record not found" {
-			return fiber.NewError(fiber.StatusUnprocessableEntity, "Incorrect email or password!")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	// If password is incorrect, do not allow access.
+	if !h.checkPasswordHash(request.Password, user.Password) {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, "incorrect email, username or password")
 	}
 
-	// If both email and password are incorrect, do not allow access.
-	if h.checkPasswordHash(request.Password, user.Password) == false {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "Incorrect email or password!")
-	}
-
-	if config.GetString("SEND_VERIFY_EMAIL", "false") == "true" {
+	if config.GetString("ENABLE_MAIL", "false") == "true" {
 		// If the user is not verified, do not allow access.
-		if user.Verified == false {
-			return fiber.NewError(fiber.StatusUnprocessableEntity, "Please verify your account!")
+		if user.VerifiedAt == nil {
+			return fiber.NewError(fiber.StatusUnprocessableEntity, "please verify your email address")
 		}
 	}
 
@@ -106,9 +99,12 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
 		user.ID.String(),
 		user.Username,
-		jwt.StandardClaims{
-			Audience:  "articpad-users",
-			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		c.IP(),
+		jwt.RegisteredClaims{
+			Audience:  jwt.ClaimStrings{"articpad-users"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(time.Minute * -2)),
 			Issuer:    "articpad-api",
 		},
 	})
@@ -143,41 +139,54 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	// Check if email is valid.
-	if !h.validEmail(request.Email) {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "Invalid email!")
+	// Parse email.
+	parsedEmail, err := mail.ParseAddress(request.Email)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, "invalid email")
 	}
 
 	// Check if username is valid.
-	if len(request.Username) < 3 || len(request.Username) > 32 {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "Username must be between 3 and 32 characters!")
+	usernameValidator := validator.New(
+		validator.MinLength(3, errors.New("username must be at least 3 characters")),
+		validator.MaxLength(32, errors.New("username must be at most 32 characters")),
+		validator.ContainsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_", errors.New("username must only contain letters, numbers, dashes, underscores and dots")),
+	)
+	if err := usernameValidator.Validate(request.Username); err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
 	}
 
 	// Check if password is valid.
-	if len(request.Password) < 8 || len(request.Password) > 64 {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "Password must be between 8 and 64 characters!")
+	similarity := 0.7
+	passwordValidator := validator.New(
+		validator.MinLength(8, errors.New("password must be at least 8 characters")),
+		validator.MaxLength(64, errors.New("password must be at most 64 characters")),
+		validator.PasswordStrength(nil),
+		validator.Similarity([]string{request.Username, parsedEmail.Address}, &similarity, errors.New("password must not be too similar to username or email")),
+	)
+	if err := passwordValidator.Validate(request.Password); err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
 	}
 
 	// Check if user already exists.
-	foundUser, err := h.userService.GetUserByEmail(customContext, request.Email)
+	foundUser, err := h.userService.GetUserByEmail(customContext, parsedEmail.Address)
 	if err != nil {
-		if err.Error() != "record not found" {
+		if err == gorm.ErrRecordNotFound {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}
 	if foundUser != nil {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "This email is already in use!")
+		return fiber.NewError(fiber.StatusUnprocessableEntity, "this email is already in use")
 	}
 
 	// Check if username already exists.
 	foundUser, err = h.userService.GetUserByUsername(customContext, request.Username)
 	if err != nil {
-		if err.Error() != "record not found" {
+		if err == gorm.ErrRecordNotFound {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}
 	if foundUser != nil {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "Username already exists!")
+		return fiber.NewError(fiber.StatusUnprocessableEntity, "username already exists")
 	}
 
 	// Hash password.
@@ -187,13 +196,20 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
+	isAdmin := false
+	// Check if this is the first user to set them as admin.
+	if ok, _ := h.userService.IsFirstUser(customContext); ok {
+		isAdmin = true
+	}
+
 	// Create user.
 	user := &user.User{
-		Username: request.Username,
-		Email:    request.Email,
-		Password: string(hashedPassword),
-		Verified: false,
-		Admin:    false,
+		Username:          request.Username,
+		Email:             parsedEmail.Address,
+		Password:          string(hashedPassword),
+		VerifiedAt:        nil,
+		VerificationToken: uuid.New().String(),
+		IsAdmin:           isAdmin,
 	}
 
 	err = h.userService.CreateUser(customContext, user)
@@ -201,15 +217,23 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	if config.GetString("SEND_VERIFY_EMAIL", "false") == "true" {
+	if config.GetString("ENABLE_MAIL", "false") == "true" {
 		// Send verification email.
-		h.mailer.SendMail(request.Email, "Verify your account", fmt.Sprintf("Please verify your account by clicking <a href=\"%s\">here</a>.", config.GetString("APP_URL", "http://localhost:8080")))
+		err := h.mailer.SendMail(parsedEmail.Address, "Verify your account", fmt.Sprintf("Please verify your account by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken, config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken))
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Your account was created but there was an error sending the verification email. If you don't receive an email, please request a new verification email. Error: "+err.Error())
+		}
 	}
 
 	// Return result.
 	return c.Status(fiber.StatusCreated).JSON(&fiber.Map{
 		"success": true,
-		"message": "User has been created successfully! Please check your email to verify your account.",
+		"message": "user has been created successfully." + func() string {
+			if config.GetString("ENABLE_MAIL", "false") == "true" {
+				return " please check your email to verify your account."
+			}
+			return ""
+		}(),
 	})
 }
 
@@ -218,7 +242,7 @@ func (h *AuthHandler) logOutUser(c *fiber.Ctx) error {
 	// TODO: Invalidate JWT.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "User has been logged out successfully!",
+		"message": "user has been logged out successfully",
 	})
 }
 
@@ -228,7 +252,8 @@ func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
 	type jwtClaims struct {
 		UserID string `json:"uid"`
 		User   string `json:"user"`
-		jwt.StandardClaims
+		UserIP string `json:"user_ip"`
+		jwt.RegisteredClaims
 	}
 
 	// Get JWT data.
@@ -239,9 +264,12 @@ func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
 		claims["uid"].(string),
 		claims["user"].(string),
-		jwt.StandardClaims{
-			Audience:  "articpad-users",
-			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		claims["user_ip"].(string),
+		jwt.RegisteredClaims{
+			Audience:  jwt.ClaimStrings{"articpad-users"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(time.Minute * -2)),
 			Issuer:    "articpad-api",
 		},
 	})
@@ -287,73 +315,125 @@ func (h *AuthHandler) getMe(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "Welcome to the private route!",
+		"message": "Welcome to the private route",
 		"jwtData": jwtResp,
+	})
+}
+
+// Resends a verification email to the user.
+func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
+	if config.GetString("ENABLE_MAIL", "false") == "false" {
+		return fiber.NewError(fiber.StatusBadRequest, "email verification is disabled")
+	}
+
+	// Create a struct so the request body can be mapped here.
+	type RequestPayload struct {
+		Login string `json:"login"`
+	}
+
+	// Create a struct so the request body can be mapped here.
+	request := new(RequestPayload)
+
+	// Parse request body.
+	err := c.BodyParser(request)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	// Create cancellable context.
+	customContext, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Fetch user by email or username.
+	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return fiber.NewError(fiber.StatusBadRequest, "user not found")
+	} else if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	// Send verification email.
+	err = h.mailer.SendMail(user.Email, "Verify your account", fmt.Sprintf("Please verify your account by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken, config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken))
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	// Return result.
+	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"success": true,
+		"message": "A verification email has been sent to your email address",
 	})
 }
 
 // Verifies a user's email and activates their account.
 func (h *AuthHandler) verifyUser(c *fiber.Ctx) error {
-	// Create cancellable context.
-	/*customContext, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Fetch parameter.
+	// Get verification token from URL.
 	verificationToken := c.Params("token")
 
-	// Verify email.
-	err := h.userService.VerifyEmail(customContext, verificationToken)
-	if err != nil {
+	// Create cancellable context.
+	customContext, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Fetch user by verification token.
+	err := h.userService.VerifyUser(customContext, verificationToken)
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid verification token")
+	} else if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}*/
+	}
 
 	// Return result.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "Your email has been verified successfully!",
+		"message": "Your email has been verified successfully",
 	})
 }
 
 // Sends a password reset email to the user.
 func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
+	if config.GetString("ENABLE_MAIL", "false") == "false" {
+		return fiber.NewError(fiber.StatusBadRequest, "mail is not enabled, please contact the administrator to reset your password")
+	}
+
+	// Create a struct so the request body can be mapped here.
+	type RequestPayload struct {
+		Login string `json:"login"`
+	}
+
+	// Create a struct so the request body can be mapped here.
+	request := new(RequestPayload)
+
+	// Parse request body.
+	err := c.BodyParser(request)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
 	// Create cancellable context.
-	/*customContext, cancel := context.WithCancel(context.Background())
+	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Fetch request body.
-	request := new(user.ForgotPasswordRequest)
-	if err := c.BodyParser(request); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-
-	// Validate request body.
-	err := h.validator.Struct(request)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-
-	// Get user.
-	user, err := h.userService.GetUserByEmail(customContext, request.Email)
-	if err != nil {
+	// Fetch user by email or username.
+	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return fiber.NewError(fiber.StatusBadRequest, "user not found")
+	} else if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	// Generate a password reset token.
-	passwordResetToken, err := h.userService.GeneratePasswordResetToken(customContext, user.ID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
+	// Set new password reset token.
+	// TODO
 
 	// Send password reset email.
-	err = h.mailer.SendPasswordResetEmail(user.Email, passwordResetToken)
+	err = h.mailer.SendMail(user.Email, "Reset your password", fmt.Sprintf("Please reset your password by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/reset-password/"+user.PasswordResetToken, config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/reset-password/"+user.PasswordResetToken))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}*/
+	}
 
 	// Return result.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "A password reset email has been sent to your email address!",
+		"message": "A password reset email has been sent to your email address",
 	})
 }
 
@@ -384,7 +464,7 @@ func (h *AuthHandler) resetPassword(c *fiber.Ctx) error {
 	// Return result.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "Your password has been reset successfully!",
+		"message": "Your password has been reset successfully",
 	})
 }
 
@@ -397,7 +477,7 @@ func (h *AuthHandler) getUser(c *fiber.Ctx) error {
 	// Fetch parameter.
 	targetedUserID, err := c.ParamsInt("userID")
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid user ID!")
+		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid user ID")
 	}
 
 	// Get one user.
@@ -437,7 +517,7 @@ func (h *AuthHandler) updateUser(c *fiber.Ctx) error {
 	// Return result.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"status":  "success",
-		"message": "User has been updated successfully!",
+		"message": "User has been updated successfully",
 	})
 }
 

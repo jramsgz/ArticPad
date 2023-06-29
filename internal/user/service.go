@@ -3,6 +3,8 @@ package user
 import (
 	"context"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Implementation of the repository in this service.
@@ -65,9 +67,31 @@ func (s *userService) DeleteUser(ctx context.Context, userID int) error {
 // Implementation of 'IsFirstUser'.
 func (s *userService) IsFirstUser(ctx context.Context) (bool, error) {
 	_, err := s.userRepository.GetFirstUser(ctx)
-	if err != nil && err.Error() == "record not found" {
+	if err != nil && err == gorm.ErrRecordNotFound {
 		return true, nil
 	}
 
 	return false, err
+}
+
+// Implementation of 'GetUserByEmailOrUsername'.
+func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*User, error) {
+	user, err := s.userRepository.GetUserByUsername(ctx, emailOrUsername)
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return nil, err
+	} else if err == nil {
+		return user, nil
+	}
+
+	user, err = s.userRepository.GetUserByEmail(ctx, emailOrUsername)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, err
+}
+
+// Implementation of 'VerifyUser'.
+func (s *userService) VerifyUser(ctx context.Context, verificationToken string) error {
+	return s.userRepository.VerifyUser(ctx, verificationToken)
 }
