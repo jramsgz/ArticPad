@@ -12,7 +12,7 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 app.use(axios, {
-  baseUrl: "https://example.com/",
+  baseUrl: import.meta.env.VITE_API_URL as string,
 });
 
 app.mount("#app");

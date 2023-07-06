@@ -8,6 +8,7 @@ const routes: Array<RouteRecordRaw> = [
     component: HomeView,
     meta: {
       showNavbar: true,
+      requieresAuth: true,
     },
   },
   {
@@ -35,6 +36,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/SettingsView.vue"),
     meta: {
       showNavbar: true,
+      requieresAuth: true,
     },
   },
   {

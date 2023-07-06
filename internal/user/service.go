@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +26,7 @@ func (s *userService) GetUsers(ctx context.Context) (*[]User, error) {
 }
 
 // Implementation of 'GetUser'.
-func (s *userService) GetUser(ctx context.Context, userID int) (*User, error) {
+func (s *userService) GetUser(ctx context.Context, userID uuid.UUID) (*User, error) {
 	return s.userRepository.GetUser(ctx, userID)
 }
 
@@ -51,7 +52,7 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 }
 
 // Implementation of 'UpdateUser'.
-func (s *userService) UpdateUser(ctx context.Context, userID int, user *User) error {
+func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error {
 	// Set value for 'UpdatedAt' attribute.
 	user.UpdatedAt = time.Now()
 
@@ -60,7 +61,7 @@ func (s *userService) UpdateUser(ctx context.Context, userID int, user *User) er
 }
 
 // Implementation of 'DeleteUser'.
-func (s *userService) DeleteUser(ctx context.Context, userID int) error {
+func (s *userService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return s.userRepository.DeleteUser(ctx, userID)
 }
 
@@ -94,4 +95,9 @@ func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsern
 // Implementation of 'VerifyUser'.
 func (s *userService) VerifyUser(ctx context.Context, verificationToken string) error {
 	return s.userRepository.VerifyUser(ctx, verificationToken)
+}
+
+// Implementation of 'SetPasswordResetToken'.
+func (s *userService) SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error {
+	return s.userRepository.SetPasswordResetToken(ctx, userID, token, expiresAt)
 }

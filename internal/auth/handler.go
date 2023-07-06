@@ -37,8 +37,8 @@ func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailer.Ma
 	authRoute.Post("/logout", JWTMiddleware(), handler.logOutUser) // TODO
 	authRoute.Post("/resend", handler.resendVerificationEmail)
 	authRoute.Get("/verify/:token", handler.verifyUser)
-	authRoute.Post("/forgot", handler.forgotPassword)                // TODO
-	authRoute.Get("/reset", handler.resetPassword)                   // TODO
+	authRoute.Post("/forgot", handler.forgotPassword)
+	authRoute.Get("/reset", handler.resetPassword)
 	authRoute.Get("/refresh", JWTMiddleware(), handler.refreshToken) // TODO
 	authRoute.Get("/me", JWTMiddleware(), handler.getMe)             // TODO
 }
@@ -190,7 +190,7 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 	}
 
 	// Hash password.
-	// TODO: Look into using Argon2id instead of bcrypt.
+	// TODO: Look into using Argon2id instead of bcrypt and create a function for this for reusability.
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), 10)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
@@ -291,32 +291,24 @@ func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
 
 // Gets the current logged in user.
 func (h *AuthHandler) getMe(c *fiber.Ctx) error {
-	// Give form to our output response.
-	type jwtResponse struct {
-		UserID interface{} `json:"uid"`
-		User   interface{} `json:"user"`
-		Iss    interface{} `json:"iss"`
-		Aud    interface{} `json:"aud"`
-		Exp    interface{} `json:"exp"`
-	}
+	// Create cancellable context.
+	customContext, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Prepare our variables to be displayed.
+	// Get JWT data.
 	jwtData := c.Locals("user").(*jwt.Token)
 	claims := jwtData.Claims.(jwt.MapClaims)
 
-	// Shape output response.
-	jwtResp := &jwtResponse{
-		UserID: claims["uid"],
-		User:   claims["user"],
-		Iss:    claims["iss"],
-		Aud:    claims["aud"],
-		Exp:    claims["exp"],
+	// Get user.
+	user, err := h.userService.GetUser(customContext, claims["uid"].(uuid.UUID))
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
+	// Send response.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "Welcome to the private route",
-		"jwtData": jwtResp,
+		"user":    user,
 	})
 }
 
@@ -397,7 +389,7 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 
 	// Create a struct so the request body can be mapped here.
 	type RequestPayload struct {
-		Login string `json:"login"`
+		Email string `json:"email"`
 	}
 
 	// Create a struct so the request body can be mapped here.
@@ -413,19 +405,24 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Fetch user by email or username.
-	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
+	// Fetch user by email
+	user, err := h.userService.GetUserByEmail(customContext, request.Email)
 	if err != nil && err == gorm.ErrRecordNotFound {
 		return fiber.NewError(fiber.StatusBadRequest, "user not found")
 	} else if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	// Set new password reset token.
-	// TODO
+	// Set new password reset token
+	token := uuid.New().String()
+	expiresAt := time.Now().Add(time.Hour * 4)
+	err = h.userService.SetPasswordResetToken(customContext, user.ID, token, expiresAt)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
 
 	// Send password reset email.
-	err = h.mailer.SendMail(user.Email, "Reset your password", fmt.Sprintf("Please reset your password by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/reset-password/"+user.PasswordResetToken, config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/reset-password/"+user.PasswordResetToken))
+	err = h.mailer.SendMail(user.Email, "Reset your password", fmt.Sprintf("A password reset token has been generated for your account. If you did not request this, please ignore this email. Otherwise, here is your password reset token: <b>%s</b> <br> This token will expire in 4 hours.", token))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -433,33 +430,64 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 	// Return result.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "A password reset email has been sent to your email address",
+		"message": "A password reset email with an unique code valid for 4 hours has been sent to your email address",
 	})
 }
 
 // Resets a user's password.
 func (h *AuthHandler) resetPassword(c *fiber.Ctx) error {
+	// Create a struct so the request body can be mapped here.
+	type RequestPayload struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Token    string `json:"token"`
+	}
+
+	// Create a struct so the request body can be mapped here.
+	request := new(RequestPayload)
+
+	// Parse request body.
+	err := c.BodyParser(request)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
 	// Create cancellable context.
-	/*customContext, cancel := context.WithCancel(context.Background())
+	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Fetch request body.
-	request := new(user.ResetPasswordRequest)
-	if err := c.BodyParser(request); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	// Fetch user by email.
+	user, err := h.userService.GetUserByEmail(customContext, request.Email)
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return fiber.NewError(fiber.StatusBadRequest, "user not found")
+	} else if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	// Validate request body.
-	err := h.validator.Struct(request)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	// Check if token is valid.
+	if user.PasswordResetToken != request.Token {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid password reset token")
 	}
 
-	// Reset password.
-	err = h.userService.ResetPassword(customContext, request.Token, request.Password)
+	// Check if token is expired.
+	if user.PasswordResetExpiresAt.Before(time.Now()) {
+		return fiber.NewError(fiber.StatusBadRequest, "password reset token has expired")
+	}
+
+	// Hash password.
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}*/
+	}
+
+	// Set new password.
+	user.Password = string(hashedPassword)
+
+	// Update user's password.
+	err = h.userService.UpdateUser(customContext, user.ID, user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
 
 	// Return result.
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
@@ -475,13 +503,16 @@ func (h *AuthHandler) getUser(c *fiber.Ctx) error {
 	defer cancel()
 
 	// Fetch parameter.
-	targetedUserID, err := c.ParamsInt("userID")
+	targetedUserID := c.Params("userID")
+
+	// Validate parameter.
+	parsedUserID, err := uuid.Parse(targetedUserID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Please specify a valid user ID")
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	// Get one user.
-	user, err := h.userService.GetUser(customContext, targetedUserID)
+	user, err := h.userService.GetUser(customContext, parsedUserID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -497,7 +528,7 @@ func (h *AuthHandler) getUser(c *fiber.Ctx) error {
 func (h *AuthHandler) updateUser(c *fiber.Ctx) error {
 	// Initialize variables.
 	user := &user.User{}
-	targetedUserID := c.Locals("userID").(int)
+	targetedUserID := c.Locals("userID").(uuid.UUID)
 
 	// Create cancellable context.
 	customContext, cancel := context.WithCancel(context.Background())
@@ -524,7 +555,7 @@ func (h *AuthHandler) updateUser(c *fiber.Ctx) error {
 // Deletes a single user.
 func (h *AuthHandler) deleteUser(c *fiber.Ctx) error {
 	// Initialize previous user ID.
-	targetedUserID := c.Locals("userID").(int)
+	targetedUserID := c.Locals("userID").(uuid.UUID)
 
 	// Create cancellable context.
 	customContext, cancel := context.WithCancel(context.Background())

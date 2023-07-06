@@ -10,17 +10,18 @@ import (
 
 // Represents the 'User' object.
 type User struct {
-	ID                 uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid"`
-	Username           string         `gorm:"uniqueIndex;not null" json:"username"`
-	Email              string         `gorm:"uniqueIndex;not null" json:"email"`
-	Password           string         `gorm:"not null" json:"password"`
-	VerifiedAt         *time.Time     `json:"verified_at"`
-	VerificationToken  string         `gorm:"uniqueIndex;not null" json:"verification_token"`
-	PasswordResetToken string         `json:"password_reset_token"`
-	IsAdmin            bool           `gorm:"not null" json:"is_admin"`
-	CreatedAt          time.Time      `json:"created_at"`
-	UpdatedAt          time.Time      `json:"updated_at"`
-	DeletedAt          gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+	ID                     uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid"`
+	Username               string         `gorm:"uniqueIndex;not null" json:"username"`
+	Email                  string         `gorm:"uniqueIndex;not null" json:"email"`
+	Password               string         `gorm:"not null" json:"password"`
+	VerifiedAt             *time.Time     `json:"verified_at"`
+	VerificationToken      string         `gorm:"uniqueIndex;not null" json:"verification_token"`
+	PasswordResetToken     string         `gorm:"uniqueIndex;not null" json:"password_reset_token"`
+	PasswordResetExpiresAt *time.Time     `json:"password_reset_expires_at"`
+	IsAdmin                bool           `gorm:"not null" json:"is_admin"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	DeletedAt              gorm.DeletedAt `json:"deleted_at" gorm:"index"`
 }
 
 // BeforeCreate will set default values for the user.
@@ -43,26 +44,28 @@ func (user *User) BeforeUpdate(tx *gorm.DB) (err error) {
 // Our repository will implement these methods.
 type UserRepository interface {
 	GetUsers(ctx context.Context) (*[]User, error)
-	GetUser(ctx context.Context, userID int) (*User, error)
+	GetUser(ctx context.Context, userID uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, userEmail string) (*User, error)
 	GetUserByUsername(ctx context.Context, username string) (*User, error)
 	CreateUser(ctx context.Context, user *User) error
-	UpdateUser(ctx context.Context, userID int, user *User) error
-	DeleteUser(ctx context.Context, userID int) error
+	UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error
+	DeleteUser(ctx context.Context, userID uuid.UUID) error
 	GetFirstUser(ctx context.Context) (*User, error)
 	VerifyUser(ctx context.Context, verificationToken string) error
+	SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error
 }
 
 // Our use-case or service will implement these methods.
 type UserService interface {
 	GetUsers(ctx context.Context) (*[]User, error)
-	GetUser(ctx context.Context, userID int) (*User, error)
+	GetUser(ctx context.Context, userID uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, userEmail string) (*User, error)
 	GetUserByUsername(ctx context.Context, username string) (*User, error)
 	CreateUser(ctx context.Context, user *User) error
-	UpdateUser(ctx context.Context, userID int, user *User) error
-	DeleteUser(ctx context.Context, userID int) error
+	UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error
+	DeleteUser(ctx context.Context, userID uuid.UUID) error
 	IsFirstUser(ctx context.Context) (bool, error)
 	GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*User, error)
 	VerifyUser(ctx context.Context, verificationToken string) error
+	SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error
 }

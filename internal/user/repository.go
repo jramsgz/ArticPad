@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -36,7 +37,7 @@ func (r *dbRepository) GetUsers(ctx context.Context) (*[]User, error) {
 }
 
 // Gets a single user in the database.
-func (r *dbRepository) GetUser(ctx context.Context, userID int) (*User, error) {
+func (r *dbRepository) GetUser(ctx context.Context, userID uuid.UUID) (*User, error) {
 	// Initialize variable.
 	user := &User{}
 
@@ -93,7 +94,7 @@ func (r *dbRepository) CreateUser(ctx context.Context, user *User) error {
 }
 
 // Updates a single user in the database.
-func (r *dbRepository) UpdateUser(ctx context.Context, userID int, user *User) error {
+func (r *dbRepository) UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error {
 	// Update one user.
 	result := r.db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(user)
 	if result.Error != nil {
@@ -105,7 +106,7 @@ func (r *dbRepository) UpdateUser(ctx context.Context, userID int, user *User) e
 }
 
 // Deletes a single user in the database.
-func (r *dbRepository) DeleteUser(ctx context.Context, userID int) error {
+func (r *dbRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	// Delete one user.
 	result := r.db.WithContext(ctx).Delete(&User{}, userID)
 	if result.Error != nil {
@@ -150,6 +151,31 @@ func (r *dbRepository) VerifyUser(ctx context.Context, verificationToken string)
 	// Update user.
 	t := time.Now()
 	user.VerifiedAt = &t
+
+	// Save user.
+	result = r.db.WithContext(ctx).Save(user)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Return empty.
+	return nil
+}
+
+// Sets the password reset token for a user.
+func (r *dbRepository) SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error {
+	// Initialize variable.
+	user := &User{}
+
+	// Prepare SQL to get one user.
+	result := r.db.WithContext(ctx).Where("id = ?", userID).First(user)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Update user.
+	user.PasswordResetToken = token
+	user.PasswordResetExpiresAt = &expiresAt
 
 	// Save user.
 	result = r.db.WithContext(ctx).Save(user)
