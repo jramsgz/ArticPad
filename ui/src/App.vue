@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import NavbarLayout from "./layouts/NavbarLayout.vue";
 import FullPageLayout from "./layouts/FullPageLayout.vue";
-import LoadingIndicator from "./components/LoadingIndicator.vue";
+import LoadingIndicator from "./components/core/LoadingIndicator.vue";
 
 const route = useRoute();
 
