@@ -3,6 +3,7 @@ import App from "./App.vue";
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import router from "./router";
+import { createAxios } from "./plugins/axios";
 import Toast from "vue-toastification";
 import { options as ToastOptions } from "./plugins/toast";
 
@@ -12,6 +13,7 @@ const app = createApp(App);
 
 app.use(createPinia());
 app.use(router);
+app.use(createAxios);
 app.use(Toast, ToastOptions);
 
 app.mount("#app");
