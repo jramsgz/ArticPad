@@ -1,9 +1,10 @@
+import App from "./App.vue";
+
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-
-import App from "./App.vue";
 import router from "./router";
-import axios from "./plugins/axios";
+import Toast from "vue-toastification";
+import { options as ToastOptions } from "./plugins/toast";
 
 import "./assets/main.css";
 
@@ -11,8 +12,6 @@ const app = createApp(App);
 
 app.use(createPinia());
 app.use(router);
-app.use(axios, {
-  baseUrl: import.meta.env.VITE_API_URL as string,
-});
+app.use(Toast, ToastOptions);
 
 app.mount("#app");
