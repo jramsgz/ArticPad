@@ -13,6 +13,7 @@ import (
 	"github.com/jramsgz/articpad/config"
 	"github.com/jramsgz/articpad/internal/mailer"
 	"github.com/jramsgz/articpad/internal/user"
+	"github.com/jramsgz/articpad/internal/utils/consts"
 	"github.com/jramsgz/articpad/internal/utils/validator"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -78,14 +79,14 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	// Get user by username from database.
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
 	if err != nil && err == gorm.ErrRecordNotFound {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "incorrect email, username or password")
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrInvalidCredentials)
 	} else if err != nil {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
 	}
 
 	// If password is incorrect, do not allow access.
 	if !h.checkPasswordHash(request.Password, user.Password) {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "incorrect email, username or password")
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrInvalidCredentials)
 	}
 
 	if config.GetString("ENABLE_MAIL", "false") == "true" {
@@ -141,15 +142,15 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 
 	// Parse email.
 	parsedEmail, err := mail.ParseAddress(request.Email)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "invalid email")
+	if err != nil || (err == nil && len(parsedEmail.Address) > 100) {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrInvalidEmail)
 	}
 
 	// Check if username is valid.
 	usernameValidator := validator.New(
-		validator.MinLength(3, errors.New("username must be at least 3 characters")),
-		validator.MaxLength(32, errors.New("username must be at most 32 characters")),
-		validator.ContainsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_", errors.New("username must only contain letters, numbers, dashes, underscores and dots")),
+		validator.MinLength(3, errors.New(consts.ErrUsernameLengthLessThan3)),
+		validator.MaxLength(32, errors.New(consts.ErrUsernameLengthMoreThan32)),
+		validator.ContainsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_", errors.New(consts.ErrUsernameContainsInvalidCharacters)),
 	)
 	if err := usernameValidator.Validate(request.Username); err != nil {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
@@ -158,10 +159,10 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 	// Check if password is valid.
 	similarity := 0.7
 	passwordValidator := validator.New(
-		validator.MinLength(8, errors.New("password must be at least 8 characters")),
-		validator.MaxLength(64, errors.New("password must be at most 64 characters")),
-		validator.PasswordStrength(nil),
-		validator.Similarity([]string{request.Username, parsedEmail.Address}, &similarity, errors.New("password must not be too similar to username or email")),
+		validator.MinLength(8, errors.New(consts.ErrPasswordLengthLessThan8)),
+		validator.MaxLength(64, errors.New(consts.ErrPasswordLengthMoreThan64)),
+		validator.PasswordStrength(errors.New(consts.ErrPasswordStrength)),
+		validator.Similarity([]string{request.Username, parsedEmail.Address}, &similarity, errors.New(consts.ErrPasswordSimilarity)),
 	)
 	if err := passwordValidator.Validate(request.Password); err != nil {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
@@ -170,23 +171,23 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 	// Check if user already exists.
 	foundUser, err := h.userService.GetUserByEmail(customContext, parsedEmail.Address)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err != gorm.ErrRecordNotFound {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}
 	if foundUser != nil {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "this email is already in use")
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrEmailAlreadyExists)
 	}
 
 	// Check if username already exists.
 	foundUser, err = h.userService.GetUserByUsername(customContext, request.Username)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err != gorm.ErrRecordNotFound {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}
 	if foundUser != nil {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "username already exists")
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrUsernameAlreadyExists)
 	}
 
 	// Hash password.

@@ -78,7 +78,7 @@ func (s *userService) IsFirstUser(ctx context.Context) (bool, error) {
 // Implementation of 'GetUserByEmailOrUsername'.
 func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*User, error) {
 	user, err := s.userRepository.GetUserByUsername(ctx, emailOrUsername)
-	if err != nil && err == gorm.ErrRecordNotFound {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	} else if err == nil {
 		return user, nil

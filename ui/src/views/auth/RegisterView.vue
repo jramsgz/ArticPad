@@ -9,28 +9,29 @@
         alt="ArticPad"
       />
       <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-200">
-        Create a new account
+        {{ $t("auth.create_new_account") }}
       </h2>
       <p class="mt-2 text-center text-sm text-gray-400">
-        Or
+        {{ $t("common.or") }}
         <router-link
           to="/login"
           class="font-medium text-indigo-400 hover:text-indigo-500"
         >
-          sign in to your account
+          {{ $t("auth.sign_in_account").toLocaleLowerCase() }}
         </router-link>
       </p>
     </div>
 
     <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-        <form class="space-y-4" action="#" method="POST">
+        <form class="space-y-4" @submit.prevent="handleSubmit">
           <div>
             <label for="email" class="block text-sm font-medium text-gray-300">
-              Email address
+              {{ $t("auth.email_address") }}
             </label>
             <div class="mt-1">
               <input
+                v-model="form.email"
                 id="email"
                 name="email"
                 type="email"
@@ -43,13 +44,34 @@
 
           <div>
             <label
-              for="password"
+              for="username"
               class="block text-sm font-medium text-gray-300"
             >
-              Password
+              {{ $t("auth.username") }}
             </label>
             <div class="mt-1">
               <input
+                v-model="form.username"
+                id="username"
+                name="username"
+                type="text"
+                autocomplete="username"
+                required
+                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              for="password"
+              class="block text-sm font-medium text-gray-300"
+            >
+              {{ $t("auth.password") }}
+            </label>
+            <div class="mt-1">
+              <input
+                v-model="form.password"
                 id="password"
                 name="password"
                 type="password"
@@ -65,10 +87,11 @@
               for="confirm-password"
               class="block text-sm font-medium text-gray-300"
             >
-              Confirm Password
+              {{ $t("auth.confirm_password") }}
             </label>
             <div class="mt-1">
               <input
+                v-model="form.confirm_password"
                 id="confirm-password"
                 name="confirm-password"
                 type="password"
@@ -82,6 +105,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <input
+                v-model="form.agree"
                 id="privacy-policy"
                 name="privacy-policyme"
                 type="checkbox"
@@ -91,30 +115,50 @@
                 for="privacy-policy"
                 class="ml-2 block text-sm text-gray-100"
               >
-                I agree to the
+                {{ $t("auth.i_agree_to_the") }}
                 <a
                   href="dummy-link"
                   target="_blank"
                   class="font-medium text-indigo-400 hover:text-indigo-500"
                 >
-                  Privacy Policy
+                  {{ $t("common.privacy_policy") }}
                 </a>
               </label>
             </div>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Create account
-            </button>
-          </div>
+          <FormButton
+            :text="$t('auth.sign_in')"
+            :disabled="!form.agree"
+            :loading="form.loading"
+          />
         </form>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useAuthStore } from "@/stores/auth";
+import { reactive } from "vue";
+
+import FormButton from "@/components/common/FormButton.vue";
+
+const authStore = useAuthStore();
+
+const form = reactive({
+  username: "",
+  email: "",
+  password: "",
+  confirm_password: "",
+  agree: false,
+  loading: false,
+});
+
+const handleSubmit = async (e: Event) => {
+  e.preventDefault();
+  form.loading = true;
+  await authStore.register(form.username, form.email, form.password);
+  form.loading = false;
+};
+</script>

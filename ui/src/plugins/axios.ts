@@ -12,13 +12,11 @@ const axiosInstance: AxiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     const urlsExcludedForBearerHeader = [
-      "/login",
-      "/forgot",
-      "/register",
-      "/reset",
+      "/auth/login",
+      "/auth/forgot",
+      "/auth/register",
+      "/auth/reset",
     ];
-
-    console.log(config.url);
 
     if (!urlsExcludedForBearerHeader.includes(config.url as string)) {
       config.headers.Authorization = `Bearer ${localStorage.getItem("token")}`;
@@ -32,7 +30,7 @@ axiosInstance.interceptors.request.use(
 
 axios.interceptors.response.use(
   (response) => {
-    if (!response.config.url?.includes("/refresh")) {
+    if (!response.config.url?.includes("/auth/refresh")) {
       // TODO: check if the token is expired and refresh it
     }
     return response;
