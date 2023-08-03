@@ -12,15 +12,19 @@ export const options: PluginOptions = {
 
 // Custom toast component with title and body
 import { useToast } from "vue-toastification";
-import TitleToast from "@/components/common/TitleToast.vue";
+import ToastTitle from "@/components/core/ToastTitle.vue";
 
 type ToastTypes = "info" | "success" | "warning" | "error";
 
 type ToastTitleInterface = {
-  [type in ToastTypes]: (title: string, body: string) => void;
+  [type in ToastTypes]: (
+    title: string,
+    body: string,
+    subtitle?: string
+  ) => void;
 };
 
-export const useToastTitle = () => {
+export const useToastWithTitle = () => {
   // Get the original toast interface
   const toast = useToast();
 
@@ -28,10 +32,10 @@ export const useToastTitle = () => {
   const createToastTitleMethod = <M extends ToastTypes>(
     method: M
   ): ToastTitleInterface[M] => {
-    return (title, body) =>
+    return (title, body, footer) =>
       // If method is "error", timeout is set to 1 minute
       toast[method](
-        { component: TitleToast, props: { title, body } },
+        { component: ToastTitle, props: { title, body, footer } },
         { timeout: method === "error" ? 60000 : options.timeout }
       );
   };
