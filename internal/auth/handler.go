@@ -118,6 +118,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
 		"token":   signedToken,
+		"user":    user,
 	})
 }
 

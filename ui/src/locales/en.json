@@ -19,7 +19,8 @@
         "password_too_similar": "Password must not be too similar to username or email",
         "email_invalid": "Email address is invalid",
         "email_in_use": "Email address is already in use",
-        "username_in_use": "Username is already in use"
+        "username_in_use": "Username is already in use",
+        "logout_failed": "An error occurred while logging out"
     },
     "common": {
         "or": "Or",
@@ -38,6 +39,8 @@
         "confirm_password": "Confirm password",
         "i_agree_to_the": "I agree to the",
         "sign_up": "Sign up",
-        "account_created": "Account successfully created"
+        "account_created": "Account successfully created",
+        "sign_out": "Sign out",
+        "you_are_being_logged_out": "You are being logged out"
     }
 }

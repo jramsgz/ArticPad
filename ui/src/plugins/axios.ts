@@ -3,6 +3,7 @@ import type { App } from "vue";
 import axios from "axios";
 import type { AxiosInstance } from "axios";
 import { axiosKey } from "@/plugins/keys";
+import { useAuthStore } from "@/stores/auth";
 
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api/v1`,
@@ -19,7 +20,8 @@ axiosInstance.interceptors.request.use(
     ];
 
     if (!urlsExcludedForBearerHeader.includes(config.url as string)) {
-      config.headers.Authorization = `Bearer ${localStorage.getItem("token")}`;
+      const authStore = useAuthStore();
+      config.headers.Authorization = `Bearer ${authStore.token}`;
     }
     return config;
   },

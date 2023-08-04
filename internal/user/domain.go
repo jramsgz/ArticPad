@@ -13,15 +13,15 @@ type User struct {
 	ID                     uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid"`
 	Username               string         `gorm:"uniqueIndex;not null" json:"username"`
 	Email                  string         `gorm:"uniqueIndex;not null" json:"email"`
-	Password               string         `gorm:"not null" json:"password"`
-	VerifiedAt             *time.Time     `json:"verified_at"`
-	VerificationToken      string         `gorm:"uniqueIndex;not null" json:"verification_token"`
-	PasswordResetToken     string         `gorm:"uniqueIndex;not null" json:"password_reset_token"`
-	PasswordResetExpiresAt *time.Time     `json:"password_reset_expires_at"`
+	Password               string         `gorm:"not null" json:"-"`
+	VerifiedAt             *time.Time     `json:"verified_at,omitempty"`
+	VerificationToken      string         `gorm:"uniqueIndex;not null" json:"-"`
+	PasswordResetToken     string         `gorm:"uniqueIndex;not null" json:"-"`
+	PasswordResetExpiresAt *time.Time     `json:"-"`
 	IsAdmin                bool           `gorm:"not null" json:"is_admin"`
 	CreatedAt              time.Time      `json:"created_at"`
 	UpdatedAt              time.Time      `json:"updated_at"`
-	DeletedAt              gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+	DeletedAt              gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // BeforeCreate will set default values for the user.

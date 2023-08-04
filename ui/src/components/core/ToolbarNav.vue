@@ -100,10 +100,13 @@
 <script setup lang="ts">
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/vue";
 import { UserCircleIcon, MagnifyingGlassIcon } from "@heroicons/vue/24/outline";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 const userNavigation = [
   { name: "Your Profile", href: "/settings/profile" },
   { name: "Settings", href: "/settings/account" },
-  { name: "Sign out", href: "#" },
+  { name: t("auth.sign_out"), href: "/logout" },
 ];
 </script>

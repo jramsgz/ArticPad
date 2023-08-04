@@ -25,6 +25,14 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/auth/RegisterView.vue"),
   },
   {
+    path: "/logout",
+    name: "logout",
+    component: () => import("../views/auth/LogoutView.vue"),
+    meta: {
+      requieresAuth: true,
+    },
+  },
+  {
     path: "/password-reset",
     name: "password-reset",
     component: () => import("../views/auth/PasswordResetView.vue"),

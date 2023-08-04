@@ -31,8 +31,12 @@ export const handleError = (err: any) => {
       showError(err.response.data, err.response.data.requestId);
     }
   } else {
-    showError(err);
+    // Make sure error is a string
+    const error = err.toString();
+
+    showError(error);
   }
+  Promise.reject(err);
 };
 
 export const showError = (error: string, footer?: string) => {

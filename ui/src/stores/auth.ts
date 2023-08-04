@@ -11,9 +11,12 @@ export const useAuthStore = defineStore({
   state: () => ({
     // Initialize state from local storage to avoid reset on page refresh
     token: localStorage.getItem("token") || null,
-    user: localStorage.getItem("user") || null,
+    user: JSON.parse(localStorage.getItem("user") || "{}") as User,
     lastUpdatedAt: localStorage.getItem("lastUpdatedAt") || null,
   }),
+  getters: {
+    isLoggedIn: (state) => !!state.token,
+  },
   actions: {
     async login(login: string, password: string) {
       try {
@@ -23,23 +26,31 @@ export const useAuthStore = defineStore({
         });
 
         if (!response.data.token) {
-          throw new Error("MISSING_TOKEN");
+          throw "MISSING_TOKEN";
         }
 
         // store jwt in local storage to keep user logged in between page refreshes
+        const updatedDate = new Date().toISOString();
         localStorage.setItem("token", response.data.token);
-        localStorage.setItem("lastUpdatedAt", new Date().toISOString());
+        localStorage.setItem("lastUpdatedAt", updatedDate);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
 
         // update pinia state
         this.token = response.data.token;
-
-        // store user details and jwt in local storage to keep user logged in between page refreshes
-        //localStorage.setItem("user", JSON.stringify(user));
+        this.lastUpdatedAt = updatedDate;
+        this.user = response.data.user;
 
         // redirect to previous url or default to home page
-        router.push(this.returnUrl || "/");
+        const returnUrl = router.currentRoute.value.query.redirect as string;
+        // Dont redirect to logout page
+        if (returnUrl === "/logout") {
+          router.push("/");
+          return;
+        }
+
+        router.push(returnUrl || "/");
       } catch (error) {
-        console.log(error);
+        console.error(error);
         handleError(error);
       }
     },
@@ -65,6 +76,23 @@ export const useAuthStore = defineStore({
         router.push("/login");
       } catch (error) {
         console.log(error);
+        handleError(error);
+      }
+    },
+    async logout() {
+      try {
+        await axios.post("/auth/logout");
+
+        this.token = null;
+        this.lastUpdatedAt = null;
+        this.user = {} as User;
+        localStorage.removeItem("token");
+        localStorage.removeItem("lastUpdatedAt");
+        localStorage.removeItem("user");
+
+        router.push("/login");
+      } catch (error) {
+        console.error(error);
         handleError(error);
       }
     },
