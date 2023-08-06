@@ -50,15 +50,7 @@
               {{ $t("auth.password") }}
             </label>
             <div class="mt-1">
-              <input
-                v-model="form.password"
-                id="password"
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                required
-                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
+              <PasswordField v-model="form.password" />
             </div>
           </div>
 
@@ -102,6 +94,7 @@ import { useAuthStore } from "@/stores/auth";
 import { reactive } from "vue";
 
 import FormButton from "@/components/common/FormButton.vue";
+import PasswordField from "@/components/common/PasswordField.vue";
 
 const authStore = useAuthStore();
 

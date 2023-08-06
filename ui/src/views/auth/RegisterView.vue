@@ -70,15 +70,7 @@
               {{ $t("auth.password") }}
             </label>
             <div class="mt-1">
-              <input
-                v-model="form.password"
-                id="password"
-                name="password"
-                type="password"
-                autocomplete="new-password"
-                required
-                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
+              <PasswordField v-model="form.password" />
             </div>
           </div>
 
@@ -102,34 +94,19 @@
             </div>
           </div>
 
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <input
-                v-model="form.agree"
-                id="privacy-policy"
-                name="privacy-policyme"
-                type="checkbox"
-                class="h-4 w-4 bg-gray-700 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label
-                for="privacy-policy"
-                class="ml-2 block text-sm text-gray-100"
-              >
-                {{ $t("auth.i_agree_to_the") }}
-                <a
-                  href="dummy-link"
-                  target="_blank"
-                  class="font-medium text-indigo-400 hover:text-indigo-500"
-                >
-                  {{ $t("common.privacy_policy") }}
-                </a>
-              </label>
-            </div>
-          </div>
-
+          <label class="ml-2 block text-sm text-gray-300">
+            {{ $t("auth.by_clicking_you_agree_to_our") }}
+            <a
+              href="dummy-link"
+              target="_blank"
+              class="font-medium text-indigo-400 hover:text-indigo-500"
+            >
+              {{ $t("common.privacy_policy") }}
+            </a>
+          </label>
           <FormButton
             :text="$t('auth.sign_in')"
-            :disabled="!form.agree"
+            :disabled="!form.username"
             :loading="form.loading"
           />
         </form>
@@ -143,6 +120,7 @@ import { useAuthStore } from "@/stores/auth";
 import { reactive } from "vue";
 
 import FormButton from "@/components/common/FormButton.vue";
+import PasswordField from "@/components/common/PasswordField.vue";
 
 const authStore = useAuthStore();
 
@@ -151,7 +129,6 @@ const form = reactive({
   email: "",
   password: "",
   confirm_password: "",
-  agree: false,
   loading: false,
 });
 
