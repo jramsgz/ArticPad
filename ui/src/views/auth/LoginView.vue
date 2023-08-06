@@ -101,14 +101,14 @@ const authStore = useAuthStore();
 const form = reactive({
   login: "",
   password: "",
-  remember_me: false,
+  remember_me: true,
   loading: false,
 });
 
 const handleSubmit = async (e: Event) => {
   e.preventDefault();
   form.loading = true;
-  await authStore.login(form.login, form.password);
+  await authStore.login(form.login, form.password, form.remember_me);
   form.loading = false;
 };
 </script>
