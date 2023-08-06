@@ -20,6 +20,8 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/auth/LoginView.vue"),
     meta: {
       layout: "full-page",
+      requieresLoggedOut: true,
+      title: "routes.login",
     },
   },
   {
@@ -28,6 +30,8 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/auth/RegisterView.vue"),
     meta: {
       layout: "full-page",
+      requieresLoggedOut: true,
+      title: "routes.register",
     },
   },
   {
@@ -37,6 +41,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       layout: "full-page",
       requieresAuth: true,
+      title: "routes.logout",
     },
   },
   {
@@ -45,6 +50,8 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/auth/PasswordResetView.vue"),
     meta: {
       layout: "full-page",
+      requieresLoggedOut: true,
+      title: "routes.password_reset",
     },
   },
   {
@@ -52,6 +59,8 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/auth/PasswordResetView.vue"),
     meta: {
       layout: "full-page",
+      requieresLoggedOut: true,
+      title: "routes.password_reset",
     },
   },
   {
@@ -62,6 +71,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       layout: "navbar",
       requieresAuth: true,
+      title: "routes.settings",
     },
   },
   {
@@ -70,6 +80,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/NotFoundView.vue"),
     meta: {
       layout: "full-page",
+      title: "routes.not_found",
     },
   },
 ];

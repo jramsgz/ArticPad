@@ -26,6 +26,14 @@
         "or": "Or",
         "privacy_policy": "Privacy Policy"
     },
+    "routes": {
+        "login": "Login",
+        "register": "Register",
+        "logout": "Logout",
+        "password_reset": "Password Reset",
+        "settings": "Settings",
+        "not_found": "Page not found"
+    },
     "auth": {
         "sign_in_account": "Sign in to your account",
         "create_new_account": "Create a new account",
@@ -37,10 +45,13 @@
         "email_address": "Email address",
         "username": "Username",
         "confirm_password": "Confirm password",
-        "i_agree_to_the": "I agree to the",
+        "by_clicking_you_agree_to_our": "By clicking \"Sign up\" you agree to our",
         "sign_up": "Sign up",
         "account_created": "Account successfully created",
         "sign_out": "Sign out",
-        "you_are_being_logged_out": "You are being logged out"
+        "you_are_being_logged_out": "You are being logged out",
+        "reset_your_password": "Reset your password",
+        "reset_password": "Reset password",
+        "go_back_to_login": "Go back to login"
     }
 }
