@@ -96,5 +96,53 @@ export const useAuthStore = defineStore({
         handleError(error);
       }
     },
+    async refreshToken() {},
+    async requestPasswordReset(email: string) {
+      try {
+        const response = await axios.post("/auth/forgot", {
+          email,
+        });
+
+        if (!response.data.success) {
+          throw response;
+        }
+
+        const toast = useToastWithTitle();
+        toast.success(
+          i18n.global.t("auth.password_reset_requested"),
+          i18n.global.t("auth.check_your_email")
+        );
+
+        // Redirect to login page
+        router.push("/login");
+      } catch (error) {
+        console.error(error);
+        handleError(error);
+      }
+    },
+    async resetPassword(token: string, password: string) {
+      try {
+        const response = await axios.post("/auth/reset", {
+          token,
+          password,
+        });
+
+        if (!response.data.success) {
+          throw response;
+        }
+
+        const toast = useToastWithTitle();
+        toast.success(
+          i18n.global.t("routes.password_reset"),
+          i18n.global.t("auth.password_reset_success")
+        );
+
+        // Redirect to login page
+        router.push("/login");
+      } catch (error) {
+        console.error(error);
+        handleError(error);
+      }
+    },
   },
 });

@@ -99,6 +99,22 @@ export const showError = (error: string, footer?: string) => {
       showToast("errors.signup_failed", "errors.password_too_weak");
       break;
 
+    case "mail is not enabled, please contact the administrator to reset your password":
+      showToast("errors.reset_password_failed", "errors.mail_not_enabled");
+      break;
+
+    case "invalid password reset token":
+      showToast("errors.reset_password_failed", "errors.invalid_token");
+      break;
+
+    case "password reset token has expired":
+      showToast("errors.reset_password_failed", "errors.token_expired");
+      break;
+
+    case "invalid verification token":
+      showToast("errors.verify_email_failed", "errors.invalid_token");
+      break;
+
     default:
       showToast("errors.unknown", error, footer);
       break;
