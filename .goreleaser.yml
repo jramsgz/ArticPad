@@ -34,7 +34,6 @@ archives:
       - src: ui/dist/*
         dst: static
         strip_parent: true
-    rlcp: true
 
 dockers:
 - image_templates:
