@@ -101,3 +101,18 @@ func (s *userService) VerifyUser(ctx context.Context, verificationToken string) 
 func (s *userService) SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error {
 	return s.userRepository.SetPasswordResetToken(ctx, userID, token, expiresAt)
 }
+
+// Implementation of 'ResetPassword'.
+func (s *userService) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	user, err := s.userRepository.GetUserByPasswordResetToken(ctx, token)
+	if err != nil {
+		return err
+	}
+
+	// Set new password.
+	user.Password = newPassword
+	user.UpdatedAt = time.Now()
+
+	// Pass to the repository layer.
+	return s.userRepository.UpdateUser(ctx, user.ID, user)
+}

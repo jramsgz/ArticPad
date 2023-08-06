@@ -186,3 +186,23 @@ func (r *dbRepository) SetPasswordResetToken(ctx context.Context, userID uuid.UU
 	// Return empty.
 	return nil
 }
+
+// Gets a user by its password reset token and checks if it is still valid.
+func (r *dbRepository) GetUserByPasswordResetToken(ctx context.Context, token string) (*User, error) {
+	// Initialize variable.
+	user := &User{}
+
+	// Prepare SQL to get one user.
+	result := r.db.WithContext(ctx).Where("password_reset_token = ?", token).First(user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Check if token is still valid.
+	if user.PasswordResetExpiresAt.Before(time.Now()) {
+		return nil, errors.New("token has expired")
+	}
+
+	// Return result.
+	return user, nil
+}

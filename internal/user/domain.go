@@ -53,6 +53,7 @@ type UserRepository interface {
 	GetFirstUser(ctx context.Context) (*User, error)
 	VerifyUser(ctx context.Context, verificationToken string) error
 	SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error
+	GetUserByPasswordResetToken(ctx context.Context, token string) (*User, error)
 }
 
 // Our use-case or service will implement these methods.
@@ -68,4 +69,5 @@ type UserService interface {
 	GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*User, error)
 	VerifyUser(ctx context.Context, verificationToken string) error
 	SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error
+	ResetPassword(ctx context.Context, token string, password string) error
 }

@@ -39,7 +39,7 @@ func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailer.Ma
 	authRoute.Post("/resend", handler.resendVerificationEmail)
 	authRoute.Get("/verify/:token", handler.verifyUser)
 	authRoute.Post("/forgot", handler.forgotPassword)
-	authRoute.Get("/reset", handler.resetPassword)
+	authRoute.Post("/reset", handler.resetPassword)
 	authRoute.Get("/refresh", JWTMiddleware(), handler.refreshToken) // TODO
 	authRoute.Get("/me", JWTMiddleware(), handler.getMe)             // TODO
 }
@@ -221,7 +221,7 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 
 	if config.GetString("ENABLE_MAIL", "false") == "true" {
 		// Send verification email.
-		err := h.mailer.SendMail(parsedEmail.Address, "Verify your account", fmt.Sprintf("Please verify your account by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken, config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken))
+		err := h.mailer.SendMail(parsedEmail.Address, "Verify your account", fmt.Sprintf("Please verify your account by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/verify/"+user.VerificationToken, config.GetString("APP_URL", "http://localhost:8080")+"/verify/"+user.VerificationToken))
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "Your account was created but there was an error sending the verification email. If you don't receive an email, please request a new verification email. Error: "+err.Error())
 		}
@@ -347,7 +347,7 @@ func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
 	}
 
 	// Send verification email.
-	err = h.mailer.SendMail(user.Email, "Verify your account", fmt.Sprintf("Please verify your account by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken, config.GetString("APP_URL", "http://localhost:8080")+"/api/v1/auth/verify/"+user.VerificationToken))
+	err = h.mailer.SendMail(user.Email, "Verify your account", fmt.Sprintf("Please verify your account by clicking this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/verify/"+user.VerificationToken, config.GetString("APP_URL", "http://localhost:8080")+"/verify/"+user.VerificationToken))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -424,7 +424,7 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 	}
 
 	// Send password reset email.
-	err = h.mailer.SendMail(user.Email, "Reset your password", fmt.Sprintf("A password reset token has been generated for your account. If you did not request this, please ignore this email. Otherwise, here is your password reset token: <b>%s</b> <br> This token will expire in 4 hours.", token))
+	err = h.mailer.SendMail(user.Email, "Reset your password", fmt.Sprintf("A password reset token has been generated for your account. If you did not request this, please ignore this email and do not share this token with anyone. If you want to reset your password, please click this link: <a href=\"%s\">%s</a>", config.GetString("APP_URL", "http://localhost:8080")+"/reset-password/"+token, config.GetString("APP_URL", "http://localhost:8080")+"/reset-password/"+token))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -440,7 +440,6 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 func (h *AuthHandler) resetPassword(c *fiber.Ctx) error {
 	// Create a struct so the request body can be mapped here.
 	type RequestPayload struct {
-		Email    string `json:"email"`
 		Password string `json:"password"`
 		Token    string `json:"token"`
 	}
@@ -458,36 +457,19 @@ func (h *AuthHandler) resetPassword(c *fiber.Ctx) error {
 	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Fetch user by email.
-	user, err := h.userService.GetUserByEmail(customContext, request.Email)
-	if err != nil && err == gorm.ErrRecordNotFound {
-		return fiber.NewError(fiber.StatusBadRequest, "user not found")
-	} else if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-
-	// Check if token is valid.
-	if user.PasswordResetToken != request.Token {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid password reset token")
-	}
-
-	// Check if token is expired.
-	if user.PasswordResetExpiresAt.Before(time.Now()) {
-		return fiber.NewError(fiber.StatusBadRequest, "password reset token has expired")
-	}
-
 	// Hash password.
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), 10)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
-
-	// Set new password.
-	user.Password = string(hashedPassword)
 
 	// Update user's password.
-	err = h.userService.UpdateUser(customContext, user.ID, user)
-	if err != nil {
+	err = h.userService.ResetPassword(customContext, request.Token, string(hashedPassword))
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid password reset token")
+	} else if err.Error() == "token has expired" {
+		return fiber.NewError(fiber.StatusBadRequest, "password reset token has expired")
+	} else if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
