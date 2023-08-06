@@ -105,7 +105,7 @@
             </a>
           </label>
           <FormButton
-            :text="$t('auth.sign_in')"
+            :text="$t('auth.sign_up')"
             :disabled="!form.username"
             :loading="form.loading"
           />
