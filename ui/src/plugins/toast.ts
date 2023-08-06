@@ -33,10 +33,10 @@ export const useToastWithTitle = () => {
     method: M
   ): ToastTitleInterface[M] => {
     return (title, body, footer) =>
-      // If method is "error", timeout is set to 1 minute
+      // If method is "error", timeout is set to 30 seconds
       toast[method](
         { component: ToastTitle, props: { title, body, footer } },
-        { timeout: method === "error" ? 60000 : options.timeout }
+        { timeout: method === "error" ? 30000 : options.timeout }
       );
   };
 
