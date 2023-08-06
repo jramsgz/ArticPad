@@ -94,7 +94,7 @@ const subNavigation: SubNavigationItem[] = [
 ];
 
 const router = useRouter();
-const currentTab = ref(null);
+const currentTab = ref(ProfileTab);
 
 watchEffect(() => {
   const tab = subNavigation.find(

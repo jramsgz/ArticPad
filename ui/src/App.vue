@@ -7,19 +7,23 @@ import LoadingIndicator from "./components/core/LoadingIndicator.vue";
 
 const route = useRoute();
 
-const showNavbar = computed(() => {
-  const showNavbar = route?.meta?.showNavbar;
-  if (showNavbar) {
-    return NavbarLayout;
+const layout = computed(() => {
+  const layout = route?.meta?.layout || "full-page";
+  switch (layout) {
+    case "navbar":
+      return NavbarLayout;
+    case "full-page":
+      return FullPageLayout;
+    default:
+      return FullPageLayout;
   }
-  return FullPageLayout;
 });
 </script>
 
 <template>
   <div class="h-full">
     <LoadingIndicator />
-    <component :is="showNavbar">
+    <component :is="layout">
       <RouterView />
     </component>
   </div>

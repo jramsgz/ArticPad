@@ -7,7 +7,7 @@ const routes: Array<RouteRecordRaw> = [
     name: "home",
     component: HomeView,
     meta: {
-      showNavbar: true,
+      layout: "navbar",
       requieresAuth: true,
     },
   },
@@ -18,17 +18,24 @@ const routes: Array<RouteRecordRaw> = [
     // this generates a separate chunk (Login.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
     component: () => import("../views/auth/LoginView.vue"),
+    meta: {
+      layout: "full-page",
+    },
   },
   {
     path: "/register",
     name: "register",
     component: () => import("../views/auth/RegisterView.vue"),
+    meta: {
+      layout: "full-page",
+    },
   },
   {
     path: "/logout",
     name: "logout",
     component: () => import("../views/auth/LogoutView.vue"),
     meta: {
+      layout: "full-page",
       requieresAuth: true,
     },
   },
@@ -36,6 +43,16 @@ const routes: Array<RouteRecordRaw> = [
     path: "/password-reset",
     name: "password-reset",
     component: () => import("../views/auth/PasswordResetView.vue"),
+    meta: {
+      layout: "full-page",
+    },
+  },
+  {
+    path: "/password-reset/:token",
+    component: () => import("../views/auth/PasswordResetView.vue"),
+    meta: {
+      layout: "full-page",
+    },
   },
   {
     // will match anything starting with `/settings/` and put it under `$route.params.afterSettings`
@@ -43,7 +60,7 @@ const routes: Array<RouteRecordRaw> = [
     name: "settings",
     component: () => import("../views/SettingsView.vue"),
     meta: {
-      showNavbar: true,
+      layout: "navbar",
       requieresAuth: true,
     },
   },
@@ -51,6 +68,9 @@ const routes: Array<RouteRecordRaw> = [
     path: "/:pathMatch(.*)*",
     name: "NotFound",
     component: () => import("../views/NotFoundView.vue"),
+    meta: {
+      layout: "full-page",
+    },
   },
 ];
 
