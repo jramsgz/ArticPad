@@ -64,6 +64,15 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: "/verify/:token",
+    component: () => import("../views/auth/VerifyView.vue"),
+    meta: {
+      layout: "full-page",
+      requieresLoggedOut: true,
+      title: "routes.verify_account",
+    },
+  },
+  {
     // will match anything starting with `/settings/` and put it under `$route.params.afterSettings`
     path: "/settings/:afterSettings(.*)",
     name: "settings",

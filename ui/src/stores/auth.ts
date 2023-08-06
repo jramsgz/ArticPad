@@ -6,6 +6,26 @@ import { handleError } from "@/utils/error-handling";
 import { useToastWithTitle } from "@/plugins/toast";
 import i18n from "@/plugins/i18n";
 
+/*
+
+https://stackblitz.com/edit/vue-3-pinia-registration-login-example?file=src%2Fstores%2Fauth.store.js
+https://upmostly.com/vue-js/how-to-use-vue-with-pinia-to-set-up-authentication
+https://v2.vuejs.org/v2/cookbook/form-validation.html?redirect=true
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getTime
+https://stackoverflow.com/questions/71949510/how-to-implement-remember-me-functionality-in-react-js
+
+*/
+
+// User type
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const useAuthStore = defineStore({
   id: "auth",
   state: () => ({
@@ -18,7 +38,7 @@ export const useAuthStore = defineStore({
     isLoggedIn: (state) => !!state.token,
   },
   actions: {
-    async login(login: string, password: string) {
+    async login(login: string, password: string, rememberMe = false) {
       try {
         const response = await axios.post("/auth/login", {
           login,
@@ -29,11 +49,13 @@ export const useAuthStore = defineStore({
           throw "MISSING_TOKEN";
         }
 
-        // store jwt in local storage to keep user logged in between page refreshes
+        // store jwt in local storage to keep user logged in between page refreshes if remember me is enabled
         const updatedDate = new Date().toISOString();
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("lastUpdatedAt", updatedDate);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        if (rememberMe) {
+          localStorage.setItem("token", response.data.token);
+          localStorage.setItem("lastUpdatedAt", updatedDate);
+          localStorage.setItem("user", JSON.stringify(response.data.user));
+        }
 
         // update pinia state
         this.token = response.data.token;
@@ -126,6 +148,27 @@ export const useAuthStore = defineStore({
           token,
           password,
         });
+
+        if (!response.data.success) {
+          throw response;
+        }
+
+        const toast = useToastWithTitle();
+        toast.success(
+          i18n.global.t("routes.password_reset"),
+          i18n.global.t("auth.password_reset_success")
+        );
+
+        // Redirect to login page
+        router.push("/login");
+      } catch (error) {
+        console.error(error);
+        handleError(error);
+      }
+    },
+    async verifyAccount(token: string) {
+      try {
+        const response = await axios.get("/auth/verify/" + token);
 
         if (!response.data.success) {
           throw response;
