@@ -10,6 +10,7 @@ type MailConfig struct {
 	Password string
 	Port     int
 	Host     string
+	ForceTLS bool
 }
 
 type Mailer struct {
@@ -19,7 +20,11 @@ type Mailer struct {
 
 // ConnectToMailer will create a new mail client and return it.
 func ConnectToMailer(config *MailConfig) (*Mailer, error) {
-	c, err := mail.NewClient(config.Host, mail.WithPort(config.Port), mail.WithSMTPAuth(mail.SMTPAuthPlain),
+	TLSPolicy := mail.TLSOpportunistic
+	if config.ForceTLS {
+		TLSPolicy = mail.TLSMandatory
+	}
+	c, err := mail.NewClient(config.Host, mail.WithPort(config.Port), mail.WithSMTPAuth(mail.SMTPAuthPlain), mail.WithTLSPolicy(TLSPolicy),
 		mail.WithUsername(config.Username), mail.WithPassword(config.Password))
 	if err != nil {
 		return nil, err

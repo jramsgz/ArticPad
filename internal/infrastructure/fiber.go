@@ -55,6 +55,7 @@ func Run() {
 		Username: config.GetString("MAIL_USERNAME", ""),
 		Password: config.GetString("MAIL_PASSWORD", ""),
 		From:     config.GetString("MAIL_FROM", "ArticPad <"+config.GetString("MAIL_USERNAME", "")+">"),
+		ForceTLS: config.GetString("MAIL_FORCE_TLS", "false") == "true",
 	})
 	if err != nil || mail == nil {
 		logger.Fatal().Msgf("Mail server connection error: %s", err)
