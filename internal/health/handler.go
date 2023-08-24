@@ -2,7 +2,6 @@ package health
 
 import "github.com/gofiber/fiber/v2"
 
-// Create a handler. Leave this empty, as we have no domains nor use-cases.
 type HealthHandler struct{}
 
 // Represents a new handler.

@@ -108,7 +108,11 @@ const form = reactive({
 const handleSubmit = async (e: Event) => {
   e.preventDefault();
   form.loading = true;
-  await authStore.login(form.login, form.password, form.remember_me);
+  authStore.login(form.login, form.password, form.remember_me).catch((err) => {
+    if (err?.response?.data?.error === "please verify your email address") {
+      console.log("please verify your email address");
+    }
+  });
   form.loading = false;
 };
 </script>

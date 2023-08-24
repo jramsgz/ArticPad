@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,14 +12,15 @@ import (
 // Represents the 'User' object.
 type User struct {
 	ID                     uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid"`
-	Username               string         `gorm:"uniqueIndex;not null" json:"username"`
-	Email                  string         `gorm:"uniqueIndex;not null" json:"email"`
-	Password               string         `gorm:"not null" json:"-"`
-	VerifiedAt             *time.Time     `json:"verified_at,omitempty"`
-	VerificationToken      string         `gorm:"uniqueIndex;not null" json:"-"`
-	PasswordResetToken     string         `gorm:"uniqueIndex;not null" json:"-"`
-	PasswordResetExpiresAt *time.Time     `json:"-"`
-	IsAdmin                bool           `gorm:"not null" json:"is_admin"`
+	Username               string         `json:"username" gorm:"uniqueIndex;not null"`
+	Email                  string         `json:"email" gorm:"uniqueIndex;not null"`
+	Password               string         `json:"-" gorm:"not null"`
+	VerifiedAt             sql.NullTime   `json:"verified_at,omitempty"`
+	VerificationToken      string         `json:"-" gorm:"uniqueIndex;not null"`
+	PasswordResetToken     string         `json:"-" gorm:"uniqueIndex;not null"`
+	PasswordResetExpiresAt sql.NullTime   `json:"-"`
+	IsAdmin                bool           `json:"is_admin" gorm:"not null"`
+	Lang                   string         `json:"lang" gorm:"not null"`
 	CreatedAt              time.Time      `json:"created_at"`
 	UpdatedAt              time.Time      `json:"updated_at"`
 	DeletedAt              gorm.DeletedAt `json:"-" gorm:"index"`

@@ -31,6 +31,7 @@ archives:
       - README.md
       - LICENSE
       - config/.env.sample
+      - templates
       - src: ui/dist/*
         dst: static
         strip_parent: true

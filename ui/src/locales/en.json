@@ -65,9 +65,10 @@
         "new_password": "New password",
         "confirm_new_password": "Confirm new password",
         "password_reset_requested": "Password reset requested",
-        "check_your_email": "Check your email",
+        "password_reset_requested_msg": "If the email address or username you entered is associated with an account, you will receive an email with instructions on how to reset your password.",
         "password_reset": "Password reset",
         "password_reset_success": "Password reset successful",
-        "account_verification": "Account verification"
+        "account_verification": "Account verification",
+        "account_verification_resent": "If the email address or username you entered is associated with an account, a verification email has been sent to it."
     }
 }

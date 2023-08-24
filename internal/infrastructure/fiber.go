@@ -1,7 +1,6 @@
 package infrastructure
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -17,50 +16,15 @@ import (
 	"github.com/jramsgz/articpad/internal/auth"
 	"github.com/jramsgz/articpad/internal/health"
 	"github.com/jramsgz/articpad/internal/logging"
-	"github.com/jramsgz/articpad/internal/mailer"
 	"github.com/jramsgz/articpad/internal/misc"
 	"github.com/jramsgz/articpad/internal/user"
+	"github.com/jramsgz/articpad/pkg/mail"
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
-// Run ArticPad API & Static Server
-func Run() {
-	// Load configuration from .env file.
-	if err := config.LoadEnv(); err != nil {
-		log.Fatal(err)
-	}
-
-	// Start logger.
-	logger, _, logFile := StartLogger(&LoggerConfig{
-		Level: config.GetString("LOG_LEVEL", "debug"),
-		Dir:   config.GetString("LOG_DIR", "./logs"),
-	})
-
-	// Try to connect to the specified database.
-	db, err := ConnectToDB(&DatabaseConfig{
-		Driver:   config.GetString("DB_DRIVER", "sqlite"),
-		Host:     config.GetString("DB_HOST", "localhost"),
-		Username: config.GetString("DB_USERNAME", "root"),
-		Password: config.GetString("DB_PASSWORD", ""),
-		Port:     config.GetInt("DB_PORT", 3306),
-		Database: config.GetString("DB_DATABASE", "config/articpad.db"),
-	})
-	if err != nil || db == nil {
-		logger.Fatal().Msgf("Database connection error: %s", err)
-	}
-
-	// Connect to mail server.
-	mail, err := mailer.ConnectToMailer(&mailer.MailConfig{
-		Host:     config.GetString("MAIL_HOST", "localhost"),
-		Port:     config.GetInt("MAIL_PORT", 25),
-		Username: config.GetString("MAIL_USERNAME", ""),
-		Password: config.GetString("MAIL_PASSWORD", ""),
-		From:     config.GetString("MAIL_FROM", "ArticPad <"+config.GetString("MAIL_USERNAME", "")+">"),
-		ForceTLS: config.GetString("MAIL_FORCE_TLS", "false") == "true",
-	})
-	if err != nil || mail == nil {
-		logger.Fatal().Msgf("Mail server connection error: %s", err)
-	}
-
+// StartFiberServer starts the Fiber server.
+func StartFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Mailer) {
 	// Set trusted proxies
 	var trustedProxies []string
 	if config.GetString("TRUSTED_PROXIES", "") != "" {
@@ -85,20 +49,11 @@ func Run() {
 	var serverShutdown sync.WaitGroup
 
 	go func() {
-		_ = <-c
+		<-c
 		serverShutdown.Add(1)
 		defer serverShutdown.Done()
 		_ = app.ShutdownWithTimeout(60 * time.Second)
 	}()
-
-	if !fiber.IsChild() {
-		// Auto-migrate database models
-		err := db.AutoMigrate(&user.User{})
-		if err != nil {
-			logger.Fatal().Msgf("failed to automigrate models: %s", err.Error())
-			return
-		}
-	}
 
 	// Use global middlewares.
 	app.Use(logging.Logger(logger, func(c *fiber.Ctx) bool {
@@ -132,7 +87,7 @@ func Run() {
 
 	misc.NewMiscHandler(apiv1)
 	health.NewHealthHandler(app.Group("/health"))
-	auth.NewAuthHandler(apiv1.Group("/auth"), userService, mail)
+	auth.NewAuthHandler(apiv1.Group("/auth"), userService, mailClient)
 	//user.NewUserHandler(apiv1.Group("/users"), userService)
 
 	// Prepare an endpoint for 'Not Found'.
@@ -170,9 +125,7 @@ func Run() {
 	}
 
 	if !fiber.IsChild() {
-		serverShutdown.Wait()
-
 		logger.Info().Msg("Shutting down server...")
-		_ = logFile.Close()
+		serverShutdown.Wait()
 	}
 }

@@ -4,11 +4,13 @@ FROM alpine:latest as release
 # Set working directory for this stage.
 WORKDIR /app
 
-# Copy our compiled executable.
+# Copy the compiled executable.
 COPY  articpad .
-# Copy our .env file.
+# Copy the .env file.
 COPY config/.env.sample ./config/.env
-# Copy our static files.
+# Copy templates.
+COPY templates ./templates
+# Copy the static files.
 COPY ui/dist ./static
 
 # Add packages

@@ -24,4 +24,6 @@ const (
 	ErrUsernameAlreadyExists = "username already exists"
 	// ErrPasswordStrength is returned when the user tries to register with a password that is too weak
 	ErrPasswordStrength = "password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
+	// ErrEmailNotVerified is returned when the user tries to login with an email that is not verified
+	ErrEmailNotVerified = "please verify your email address"
 )

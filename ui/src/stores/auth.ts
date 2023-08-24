@@ -73,7 +73,7 @@ export const useAuthStore = defineStore({
         router.push(returnUrl || "/");
       } catch (error) {
         console.error(error);
-        handleError(error);
+        return handleError(error);
       }
     },
     async register(username: string, email: string, password: string) {
@@ -119,10 +119,10 @@ export const useAuthStore = defineStore({
       }
     },
     async refreshToken() {},
-    async requestPasswordReset(email: string) {
+    async requestPasswordReset(login: string) {
       try {
         const response = await axios.post("/auth/forgot", {
-          email,
+          login,
         });
 
         if (!response.data.success) {
@@ -132,7 +132,7 @@ export const useAuthStore = defineStore({
         const toast = useToastWithTitle();
         toast.success(
           i18n.global.t("auth.password_reset_requested"),
-          i18n.global.t("auth.check_your_email")
+          i18n.global.t("auth.password_reset_requested_msg")
         );
 
         // Redirect to login page
@@ -161,6 +161,26 @@ export const useAuthStore = defineStore({
 
         // Redirect to login page
         router.push("/login");
+      } catch (error) {
+        console.error(error);
+        handleError(error);
+      }
+    },
+    async resendVerificationEmail(login: string) {
+      try {
+        const response = await axios.post("/auth/resend", {
+          login,
+        });
+
+        if (!response.data.success) {
+          throw response;
+        }
+
+        const toast = useToastWithTitle();
+        toast.success(
+          i18n.global.t("auth.account_verification"),
+          i18n.global.t("auth.account_verification_resent")
+        );
       } catch (error) {
         console.error(error);
         handleError(error);

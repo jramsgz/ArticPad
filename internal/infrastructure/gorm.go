@@ -7,6 +7,7 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type DatabaseConfig struct {
@@ -23,12 +24,17 @@ func ConnectToDB(config *DatabaseConfig) (*gorm.DB, error) {
 	var err error
 	switch strings.ToLower(config.Driver) {
 	case "sqlite":
-		db, err = gorm.Open(sqlite.Open(config.Database), &gorm.Config{})
-		break
+		// TODO: Remove logger from production.
+		db, err = gorm.Open(sqlite.Open(config.Database), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Info),
+		})
 	case "postgresql", "postgres":
 		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", config.Host, config.Port, config.Username, config.Password, config.Database)
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-		break
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Error),
+		})
+	default:
+		return nil, fmt.Errorf("invalid database driver: %s", config.Driver)
 	}
 	return db, err
 }

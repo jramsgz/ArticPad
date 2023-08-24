@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -144,13 +145,15 @@ func (r *dbRepository) VerifyUser(ctx context.Context, verificationToken string)
 	}
 
 	// Check if user is already verified.
-	if user.VerifiedAt != nil {
+	if user.VerifiedAt.Valid && user.VerifiedAt.Time.Before(time.Now()) {
 		return errors.New("user is already verified")
 	}
 
 	// Update user.
-	t := time.Now()
-	user.VerifiedAt = &t
+	user.VerifiedAt = sql.NullTime{
+		Time:  time.Now(),
+		Valid: true,
+	}
 
 	// Save user.
 	result = r.db.WithContext(ctx).Save(user)
@@ -175,7 +178,10 @@ func (r *dbRepository) SetPasswordResetToken(ctx context.Context, userID uuid.UU
 
 	// Update user.
 	user.PasswordResetToken = token
-	user.PasswordResetExpiresAt = &expiresAt
+	user.PasswordResetExpiresAt = sql.NullTime{
+		Time:  expiresAt,
+		Valid: true,
+	}
 
 	// Save user.
 	result = r.db.WithContext(ctx).Save(user)
@@ -199,7 +205,7 @@ func (r *dbRepository) GetUserByPasswordResetToken(ctx context.Context, token st
 	}
 
 	// Check if token is still valid.
-	if user.PasswordResetExpiresAt.Before(time.Now()) {
+	if user.PasswordResetExpiresAt.Valid && user.PasswordResetExpiresAt.Time.Before(time.Now()) {
 		return nil, errors.New("token has expired")
 	}
 

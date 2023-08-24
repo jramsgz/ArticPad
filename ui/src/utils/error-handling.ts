@@ -36,7 +36,7 @@ export const handleError = (err: any) => {
 
     showError(error);
   }
-  Promise.reject(err);
+  return Promise.reject(err);
 };
 
 export const showError = (error: string, footer?: string) => {

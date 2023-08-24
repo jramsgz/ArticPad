@@ -2,9 +2,15 @@ package user
 
 import (
 	"context"
+	"database/sql"
+	"net/mail"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jramsgz/articpad/internal/utils/consts"
+	"github.com/jramsgz/articpad/pkg/argon2id"
+	"github.com/jramsgz/articpad/pkg/validator"
 	"gorm.io/gorm"
 )
 
@@ -42,21 +48,101 @@ func (s *userService) GetUserByUsername(ctx context.Context, userName string) (*
 
 // Implementation of 'CreateUser'.
 func (s *userService) CreateUser(ctx context.Context, user *User) error {
-	// Set default value of 'CreatedAt' and 'UpdatedAt'.
 	now := time.Now()
 	user.CreatedAt = now
 	user.UpdatedAt = now
 
-	// Pass to the repository layer.
+	parsedEmail, err := mail.ParseAddress(user.Email)
+	if err != nil || (err == nil && len(parsedEmail.Address) > 100) {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrInvalidEmail)
+	}
+	user.Email = parsedEmail.Address
+
+	usernameValidator := validator.DefaultUsernameValidator
+	if err := usernameValidator.Validate(user.Username); err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	passwordValidator := validator.DefaultPasswordValidator([]string{user.Username, user.Email})
+	if err := passwordValidator.Validate(user.Password); err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	foundUser, err := s.GetUserByEmail(ctx, user.Email)
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+	}
+	if foundUser != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrEmailAlreadyExists)
+	}
+
+	foundUser, err = s.GetUserByUsername(ctx, user.Username)
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+	}
+	if foundUser != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrUsernameAlreadyExists)
+	}
+
+	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
+	if err != nil {
+		return err
+	}
+	user.Password = hashedPassword
+
 	return s.userRepository.CreateUser(ctx, user)
 }
 
 // Implementation of 'UpdateUser'.
 func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error {
-	// Set value for 'UpdatedAt' attribute.
 	user.UpdatedAt = time.Now()
 
-	// Pass to the repository layer.
+	parsedEmail, err := mail.ParseAddress(user.Email)
+	if err != nil || (err == nil && len(parsedEmail.Address) > 100) {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrInvalidEmail)
+	}
+	user.Email = parsedEmail.Address
+
+	usernameValidator := validator.DefaultUsernameValidator
+	if err := usernameValidator.Validate(user.Username); err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	passwordValidator := validator.DefaultPasswordValidator([]string{user.Username, user.Email})
+	if err := passwordValidator.Validate(user.Password); err != nil {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	foundUser, err := s.GetUserByEmail(ctx, user.Email)
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+	}
+	if foundUser != nil && foundUser.ID != user.ID {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrEmailAlreadyExists)
+	}
+
+	foundUser, err = s.GetUserByUsername(ctx, user.Username)
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+	}
+	if foundUser != nil && foundUser.ID != user.ID {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrUsernameAlreadyExists)
+	}
+
+	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
+	if err != nil {
+		return err
+	}
+	user.Password = hashedPassword
+
 	return s.userRepository.UpdateUser(ctx, userID, user)
 }
 
@@ -109,10 +195,14 @@ func (s *userService) ResetPassword(ctx context.Context, token string, newPasswo
 		return err
 	}
 
-	// Set new password.
 	user.Password = newPassword
-	user.UpdatedAt = time.Now()
 
-	// Pass to the repository layer.
+	now := time.Now()
+	user.PasswordResetExpiresAt = sql.NullTime{
+		Time:  now,
+		Valid: true,
+	}
+	user.UpdatedAt = now
+
 	return s.userRepository.UpdateUser(ctx, user.ID, user)
 }
