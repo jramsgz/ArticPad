@@ -3,6 +3,11 @@ import { defineStore } from "pinia";
 import router from "@/router";
 import axios from "@/plugins/axios";
 import { handleError } from "@/utils/error-handling";
+import {
+  getFromLocalStorage,
+  saveToLocalStorage,
+  removeFromLocalStorage,
+} from "@/utils/localStorage";
 import { useToastWithTitle } from "@/plugins/toast";
 import i18n from "@/plugins/i18n";
 
@@ -30,9 +35,9 @@ export const useAuthStore = defineStore({
   id: "auth",
   state: () => ({
     // Initialize state from local storage to avoid reset on page refresh
-    token: localStorage.getItem("token") || null,
-    user: JSON.parse(localStorage.getItem("user") || "{}") as User,
-    lastUpdatedAt: localStorage.getItem("lastUpdatedAt") || null,
+    token: getFromLocalStorage("token", null),
+    user: JSON.parse(getFromLocalStorage("user", "{}")) as User,
+    lastUpdatedAt: getFromLocalStorage("lastUpdatedAt", null),
   }),
   getters: {
     isLoggedIn: (state) => !!state.token,
@@ -52,9 +57,9 @@ export const useAuthStore = defineStore({
         // store jwt in local storage to keep user logged in between page refreshes if remember me is enabled
         const updatedDate = new Date().toISOString();
         if (rememberMe) {
-          localStorage.setItem("token", response.data.token);
-          localStorage.setItem("lastUpdatedAt", updatedDate);
-          localStorage.setItem("user", JSON.stringify(response.data.user));
+          saveToLocalStorage("token", response.data.token);
+          saveToLocalStorage("lastUpdatedAt", updatedDate);
+          saveToLocalStorage("user", JSON.stringify(response.data.user));
         }
 
         // update pinia state
@@ -108,9 +113,9 @@ export const useAuthStore = defineStore({
         this.token = null;
         this.lastUpdatedAt = null;
         this.user = {} as User;
-        localStorage.removeItem("token");
-        localStorage.removeItem("lastUpdatedAt");
-        localStorage.removeItem("user");
+        removeFromLocalStorage("token");
+        removeFromLocalStorage("lastUpdatedAt");
+        removeFromLocalStorage("user");
 
         router.push("/login");
       } catch (error) {
@@ -196,8 +201,8 @@ export const useAuthStore = defineStore({
 
         const toast = useToastWithTitle();
         toast.success(
-          i18n.global.t("routes.password_reset"),
-          i18n.global.t("auth.password_reset_success")
+          i18n.global.t("auth.account_verification"),
+          i18n.global.t("auth.account_verified_successfully")
         );
 
         // Redirect to login page

@@ -26,7 +26,10 @@
         "invalid_token": "Invalid token",
         "token_expired": "Token expired",
         "account_verification_failed": "Account verification failed",
-        "verify_email_failed": "An error occurred while verifying your email address"
+        "already_verified": "Account is already verified",
+        "verify_email_failed": "An error occurred while verifying your email address",
+        "email_already_verified": "Email address is already verified, you can now log in",
+        "local_storage_not_available": "Local storage is not available, please enable cookies to persist your session"
     },
     "common": {
         "or": "Or",
@@ -69,6 +72,7 @@
         "password_reset": "Password reset",
         "password_reset_success": "Password reset successful",
         "account_verification": "Account verification",
-        "account_verification_resent": "If the email address or username you entered is associated with an account, a verification email has been sent to it."
+        "account_verification_resent": "If the email address or username you entered is associated with an account, a verification email has been sent to it.",
+        "account_verified_successfully": "Account verified successfully, you can now log in"
     }
 }
