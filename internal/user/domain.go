@@ -17,8 +17,8 @@ type User struct {
 	Password               string         `json:"-" gorm:"not null"`
 	VerifiedAt             sql.NullTime   `json:"verified_at,omitempty"`
 	VerificationToken      string         `json:"-" gorm:"uniqueIndex;not null"`
-	PasswordResetToken     string         `json:"-" gorm:"uniqueIndex;not null"`
-	PasswordResetExpiresAt sql.NullTime   `json:"-"`
+	PasswordResetToken     sql.NullString `json:"-" gorm:"uniqueIndex"`
+	PasswordResetExpiresAt time.Time      `json:"-"`
 	IsAdmin                bool           `json:"is_admin" gorm:"not null"`
 	Lang                   string         `json:"lang" gorm:"not null"`
 	CreatedAt              time.Time      `json:"created_at"`
@@ -32,6 +32,7 @@ func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
 	user.ID = uuid.New()
 	// Set the created and updated times.
 	now := time.Now()
+	user.PasswordResetExpiresAt = now
 	user.CreatedAt = now
 	user.UpdatedAt = now
 	return

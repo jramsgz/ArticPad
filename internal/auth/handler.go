@@ -283,6 +283,9 @@ func (h *AuthHandler) verifyUser(c *fiber.Ctx) error {
 	if err != nil && err == gorm.ErrRecordNotFound {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid verification token")
 	} else if err != nil {
+		if fiberErr, ok := err.(*fiber.Error); ok {
+			return fiberErr
+		}
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 

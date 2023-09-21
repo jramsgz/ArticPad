@@ -177,11 +177,11 @@ func (r *dbRepository) SetPasswordResetToken(ctx context.Context, userID uuid.UU
 	}
 
 	// Update user.
-	user.PasswordResetToken = token
-	user.PasswordResetExpiresAt = sql.NullTime{
-		Time:  expiresAt,
-		Valid: true,
+	user.PasswordResetToken = sql.NullString{
+		String: token,
+		Valid:  true,
 	}
+	user.PasswordResetExpiresAt = expiresAt
 
 	// Save user.
 	result = r.db.WithContext(ctx).Save(user)
@@ -205,7 +205,7 @@ func (r *dbRepository) GetUserByPasswordResetToken(ctx context.Context, token st
 	}
 
 	// Check if token is still valid.
-	if user.PasswordResetExpiresAt.Valid && user.PasswordResetExpiresAt.Time.Before(time.Now()) {
+	if user.PasswordResetExpiresAt.Before(time.Now()) {
 		return nil, errors.New("token has expired")
 	}
 

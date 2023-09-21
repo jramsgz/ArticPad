@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"database/sql"
 	"net/mail"
 	"time"
 
@@ -48,10 +47,6 @@ func (s *userService) GetUserByUsername(ctx context.Context, userName string) (*
 
 // Implementation of 'CreateUser'.
 func (s *userService) CreateUser(ctx context.Context, user *User) error {
-	now := time.Now()
-	user.CreatedAt = now
-	user.UpdatedAt = now
-
 	parsedEmail, err := mail.ParseAddress(user.Email)
 	if err != nil || (err == nil && len(parsedEmail.Address) > 100) {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrInvalidEmail)
@@ -99,8 +94,6 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 
 // Implementation of 'UpdateUser'.
 func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error {
-	user.UpdatedAt = time.Now()
-
 	parsedEmail, err := mail.ParseAddress(user.Email)
 	if err != nil || (err == nil && len(parsedEmail.Address) > 100) {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, consts.ErrInvalidEmail)
@@ -180,7 +173,13 @@ func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsern
 
 // Implementation of 'VerifyUser'.
 func (s *userService) VerifyUser(ctx context.Context, verificationToken string) error {
-	return s.userRepository.VerifyUser(ctx, verificationToken)
+	err := s.userRepository.VerifyUser(ctx, verificationToken)
+	if err != nil {
+		if err.Error() == "user is already verified" {
+			return fiber.NewError(fiber.StatusBadRequest, consts.ErrEmailAlreadyVerified)
+		}
+	}
+	return err
 }
 
 // Implementation of 'SetPasswordResetToken'.
@@ -196,13 +195,7 @@ func (s *userService) ResetPassword(ctx context.Context, token string, newPasswo
 	}
 
 	user.Password = newPassword
-
-	now := time.Now()
-	user.PasswordResetExpiresAt = sql.NullTime{
-		Time:  now,
-		Valid: true,
-	}
-	user.UpdatedAt = now
+	user.PasswordResetExpiresAt = time.Now()
 
 	return s.userRepository.UpdateUser(ctx, user.ID, user)
 }
