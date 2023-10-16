@@ -1,11 +1,7 @@
 package infrastructure
 
 import (
-	"os"
-	"os/signal"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -18,13 +14,14 @@ import (
 	"github.com/jramsgz/articpad/internal/logging"
 	"github.com/jramsgz/articpad/internal/misc"
 	"github.com/jramsgz/articpad/internal/user"
+	"github.com/jramsgz/articpad/pkg/i18n"
 	"github.com/jramsgz/articpad/pkg/mail"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
-// StartFiberServer starts the Fiber server.
-func StartFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Mailer) {
+// startFiberServer starts the Fiber server.
+func startFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Mailer, i18n *i18n.I18n) *fiber.App {
 	// Set trusted proxies
 	var trustedProxies []string
 	if config.GetString("TRUSTED_PROXIES", "") != "" {
@@ -42,18 +39,6 @@ func StartFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Maile
 		EnableTrustedProxyCheck: enableProxy,
 		TrustedProxies:          trustedProxies,
 	})
-
-	// Setup graceful shutdown.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	var serverShutdown sync.WaitGroup
-
-	go func() {
-		<-c
-		serverShutdown.Add(1)
-		defer serverShutdown.Done()
-		_ = app.ShutdownWithTimeout(60 * time.Second)
-	}()
 
 	// Use global middlewares.
 	app.Use(logging.Logger(logger, func(c *fiber.Ctx) bool {
@@ -87,7 +72,7 @@ func StartFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Maile
 
 	misc.NewMiscHandler(apiv1)
 	health.NewHealthHandler(app.Group("/health"))
-	auth.NewAuthHandler(apiv1.Group("/auth"), userService, mailClient)
+	auth.NewAuthHandler(apiv1.Group("/auth"), userService, mailClient, i18n)
 	//user.NewUserHandler(apiv1.Group("/users"), userService)
 
 	// Prepare an endpoint for 'Not Found'.
@@ -115,17 +100,5 @@ func StartFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Maile
 		return ctx.SendFile("./" + config.GetString("STATIC_DIR", "static") + "/index.html")
 	})
 
-	if !fiber.IsChild() {
-		logger.Info().Msgf("Starting ArticPad %s with isProduction: %t", config.Version, isProduction)
-		logger.Info().Msgf("BuildTime: %s | Commit: %s", config.BuildTime, config.Commit)
-		logger.Info().Msgf("Listening on %s", config.GetString("APP_ADDR", ":8080"))
-	}
-	if err := app.Listen(config.GetString("APP_ADDR", ":8080")); err != nil {
-		logger.Fatal().Err(err).Msg("Error starting server")
-	}
-
-	if !fiber.IsChild() {
-		logger.Info().Msg("Shutting down server...")
-		serverShutdown.Wait()
-	}
+	return app
 }

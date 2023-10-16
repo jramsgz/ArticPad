@@ -19,7 +19,7 @@ type DatabaseConfig struct {
 	Database string
 }
 
-func ConnectToDB(config *DatabaseConfig) (*gorm.DB, error) {
+func connectToDB(config *DatabaseConfig) (*gorm.DB, error) {
 	var db *gorm.DB
 	var err error
 	switch strings.ToLower(config.Driver) {

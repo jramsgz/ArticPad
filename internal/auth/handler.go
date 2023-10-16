@@ -12,9 +12,9 @@ import (
 	"github.com/jramsgz/articpad/config"
 	"github.com/jramsgz/articpad/internal/user"
 	"github.com/jramsgz/articpad/internal/utils/consts"
-	"github.com/jramsgz/articpad/internal/utils/i18n"
 	"github.com/jramsgz/articpad/internal/utils/templates"
 	"github.com/jramsgz/articpad/pkg/argon2id"
+	"github.com/jramsgz/articpad/pkg/i18n"
 	mailClient "github.com/jramsgz/articpad/pkg/mail"
 	"gorm.io/gorm"
 )
@@ -22,13 +22,15 @@ import (
 type AuthHandler struct {
 	userService user.UserService
 	mailer      *mailClient.Mailer
+	i18n        *i18n.I18n
 }
 
 // Creates a new authentication handler.
-func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailClient.Mailer) {
+func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailClient.Mailer, i18n *i18n.I18n) {
 	handler := &AuthHandler{
 		userService: us,
 		mailer:      mail,
+		i18n:        i18n,
 	}
 
 	authRoute.Post("/login", handler.signInUser)
@@ -140,7 +142,7 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		VerifiedAt:        sql.NullTime{Valid: false, Time: time.Time{}},
 		VerificationToken: uuid.New().String(),
 		IsAdmin:           isAdmin,
-		Lang:              i18n.ParseLanguageHeader(c.Get("Accept-Language")).String(),
+		Lang:              h.i18n.ParseLanguage(c.Get("Accept-Language")),
 	}
 
 	err = h.userService.CreateUser(customContext, user)
@@ -152,7 +154,7 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 	}
 
 	if config.GetString("ENABLE_MAIL", "false") == "true" {
-		err := h.mailer.SendMail(templates.GetEmailVerificationEmail(user))
+		err := h.mailer.SendMail(templates.GetEmailVerificationEmail(h.i18n, user))
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "Your account was created but there was an error sending the verification email. If you don't receive an email, please request a new verification email. Error: "+err.Error())
 		}
@@ -260,7 +262,7 @@ func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
 	}
 
 	if err != gorm.ErrRecordNotFound {
-		err = h.mailer.SendMail(templates.GetEmailVerificationEmail(user))
+		err = h.mailer.SendMail(templates.GetEmailVerificationEmail(h.i18n, user))
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
@@ -327,7 +329,7 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 
-		err = h.mailer.SendMail(templates.GetPasswordResetEmail(user, token))
+		err = h.mailer.SendMail(templates.GetPasswordResetEmail(h.i18n, user, token))
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}

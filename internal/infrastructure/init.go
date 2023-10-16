@@ -2,6 +2,10 @@ package infrastructure
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jramsgz/articpad/config"
@@ -17,13 +21,19 @@ func Run() {
 	}
 
 	// Start logger.
-	logger, _, logFile := StartLogger(&LoggerConfig{
+	logger, _, logFile := startLogger(&LoggerConfig{
 		Level: config.GetString("LOG_LEVEL", "debug"),
 		Dir:   config.GetString("LOG_DIR", "./logs"),
 	})
 
+	// Start i18n service.
+	i18n, err := startI18n(config.GetString("LOCALES_DIR", "locales"))
+	if err != nil {
+		logger.Fatal().Msgf("failed to start i18n service: %s", err.Error())
+	}
+
 	// Try to connect to the specified database.
-	db, err := ConnectToDB(&DatabaseConfig{
+	db, err := connectToDB(&DatabaseConfig{
 		Driver:   config.GetString("DB_DRIVER", "sqlite"),
 		Host:     config.GetString("DB_HOST", "localhost"),
 		Username: config.GetString("DB_USERNAME", "root"),
@@ -59,7 +69,33 @@ func Run() {
 	}
 
 	// Start Fiber.
-	StartFiberServer(logger, db, mailClient)
+	app := startFiberServer(logger, db, mailClient, i18n)
+
+	// Setup graceful shutdown.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	var serverShutdown sync.WaitGroup
+
+	go func() {
+		<-c
+		serverShutdown.Add(1)
+		defer serverShutdown.Done()
+		_ = app.ShutdownWithTimeout(60 * time.Second)
+	}()
+
+	if !fiber.IsChild() {
+		logger.Info().Msgf("Starting ArticPad %s with isProduction: %t", config.Version, true)
+		logger.Info().Msgf("BuildTime: %s | Commit: %s", config.BuildTime, config.Commit)
+		logger.Info().Msgf("Listening on %s", config.GetString("APP_ADDR", ":8080"))
+	}
+	if err := app.Listen(config.GetString("APP_ADDR", ":8080")); err != nil {
+		logger.Fatal().Err(err).Msg("Error starting server")
+	}
+
+	if !fiber.IsChild() {
+		logger.Info().Msg("Shutting down server...")
+		serverShutdown.Wait()
+	}
 
 	// TODO: Only for main process or every process?
 	if true {
