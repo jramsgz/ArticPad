@@ -14,10 +14,10 @@ import (
 func GetEmailVerificationEmail(i18n *i18n.I18n, user *user.User) *mail.MailMessage {
 	lang := i18n.ParseLanguage(user.Lang)
 	t := buildTemplate("email_verification.html", map[string]string{
-		"URL":        config.GetString("APP_URL", "http://localhost:8080") + "/verify/" + user.VerificationToken,
+		"URL":        config.GetString("APP_URL") + "/verify/" + user.VerificationToken,
 		"Subject":    i18n.T(lang, "email.verification.subject"),
 		"Header":     i18n.T(lang, "email.verification.header"),
-		"LogoURL":    config.GetString("APP_URL", "http://localhost:8080") + "/assets/logo_vertical.png",
+		"LogoURL":    config.GetString("APP_URL") + "/assets/logo_vertical.png",
 		"Title":      i18n.T(lang, "email.verification.title"),
 		"Content":    i18n.T(lang, "email.verification.content"),
 		"Button":     i18n.T(lang, "email.verification.button"),
@@ -36,10 +36,10 @@ func GetEmailVerificationEmail(i18n *i18n.I18n, user *user.User) *mail.MailMessa
 func GetPasswordResetEmail(i18n *i18n.I18n, user *user.User, token string) *mail.MailMessage {
 	lang := i18n.ParseLanguage(user.Lang)
 	t := buildTemplate("password_reset.html", map[string]string{
-		"URL":        config.GetString("APP_URL", "http://localhost:8080") + "/password-reset/" + token,
+		"URL":        config.GetString("APP_URL") + "/password-reset/" + token,
 		"Subject":    i18n.T(lang, "email.password_reset.subject"),
 		"Header":     i18n.T(lang, "email.password_reset.header"),
-		"LogoURL":    config.GetString("APP_URL", "http://localhost:8080") + "/assets/logo_vertical.png",
+		"LogoURL":    config.GetString("APP_URL") + "/assets/logo_vertical.png",
 		"Title":      i18n.T(lang, "email.password_reset.title"),
 		"Content":    i18n.T(lang, "email.password_reset.content"),
 		"Button":     i18n.T(lang, "email.password_reset.button"),
@@ -56,7 +56,7 @@ func GetPasswordResetEmail(i18n *i18n.I18n, user *user.User, token string) *mail
 
 // buildTemplate builds the template with the given language, template type and data.
 func buildTemplate(templateType string, data map[string]string) string {
-	path := config.GetString("TEMPLATES_DIR", "templates")
+	path := config.GetString("TEMPLATES_DIR")
 
 	temp := template.Must(template.ParseGlob(path + "/mail/*.html"))
 

@@ -82,7 +82,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		return apierror.NewApiError(fiber.StatusUnauthorized, consts.ErrCodeInvalidCredentials, h.i18n.T(langCode, "errors.invalid_credentials"))
 	}
 
-	if config.GetString("ENABLE_MAIL", "false") == "true" {
+	if config.GetString("ENABLE_MAIL") == "true" {
 		if !user.VerifiedAt.Valid || user.VerifiedAt.Time.IsZero() || user.VerifiedAt.Time.Before(time.Now()) {
 			return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeEmailNotVerified, h.i18n.T(langCode, "errors.email_not_verified"))
 		}
@@ -100,7 +100,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 			Issuer:    "articpad-api",
 		},
 	})
-	signedToken, err := token.SignedString([]byte(config.GetString("SECRET", "MyRandomSecureSecret")))
+	signedToken, err := token.SignedString([]byte(config.GetString("SECRET")))
 	if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
@@ -155,7 +155,7 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return consts.MapApiError(err, h.i18n, langCode)
 	}
 
-	if config.GetString("ENABLE_MAIL", "false") == "true" {
+	if config.GetString("ENABLE_MAIL") == "true" {
 		err := h.mailer.SendMail(templates.GetEmailVerificationEmail(h.i18n, user))
 		if err != nil {
 			return apierror.NewApiError(
@@ -205,7 +205,7 @@ func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
 		},
 	})
 
-	signedToken, err := token.SignedString([]byte(config.GetString("SECRET", "MyRandomSecureSecret")))
+	signedToken, err := token.SignedString([]byte(config.GetString("SECRET")))
 	if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
@@ -241,7 +241,7 @@ func (h *AuthHandler) getMe(c *fiber.Ctx) error {
 func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
 	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
 
-	if config.GetString("ENABLE_MAIL", "false") == "false" {
+	if config.GetString("ENABLE_MAIL") == "false" {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeMailNotEnabled, h.i18n.T(langCode, "errors.mail_not_enabled"))
 	}
 
@@ -305,7 +305,7 @@ func (h *AuthHandler) verifyUser(c *fiber.Ctx) error {
 func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
 
-	if config.GetString("ENABLE_MAIL", "false") == "false" {
+	if config.GetString("ENABLE_MAIL") == "false" {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeMailNotEnabled, h.i18n.T(langCode, "errors.mail_not_enabled_reset_password"))
 	}
 

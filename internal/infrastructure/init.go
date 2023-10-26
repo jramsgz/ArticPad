@@ -22,24 +22,24 @@ func Run() {
 
 	// Start logger.
 	logger, _, logFile := startLogger(&LoggerConfig{
-		Level: config.GetString("LOG_LEVEL", "debug"),
-		Dir:   config.GetString("LOG_DIR", "./logs"),
+		Level: config.GetString("LOG_LEVEL"),
+		Dir:   config.GetString("LOG_DIR"),
 	})
 
 	// Start i18n service.
-	i18n, err := startI18n(config.GetString("LOCALES_DIR", "locales"))
+	i18n, err := startI18n(config.GetString("LOCALES_DIR"))
 	if err != nil {
 		logger.Fatal().Msgf("failed to start i18n service: %s", err.Error())
 	}
 
 	// Try to connect to the specified database.
 	db, err := connectToDB(&DatabaseConfig{
-		Driver:   config.GetString("DB_DRIVER", "sqlite"),
-		Host:     config.GetString("DB_HOST", "localhost"),
-		Username: config.GetString("DB_USERNAME", "root"),
-		Password: config.GetString("DB_PASSWORD", ""),
-		Port:     config.GetInt("DB_PORT", 3306),
-		Database: config.GetString("DB_DATABASE", "config/articpad.db"),
+		Driver:   config.GetString("DB_DRIVER"),
+		Host:     config.GetString("DB_HOST"),
+		Username: config.GetString("DB_USERNAME"),
+		Password: config.GetString("DB_PASSWORD"),
+		Port:     config.GetInt("DB_PORT"),
+		Database: config.GetString("DB_DATABASE"),
 	})
 	if err != nil || db == nil {
 		logger.Fatal().Msgf("Database connection error: %s", err)
@@ -57,12 +57,12 @@ func Run() {
 
 	// Connect to mail server.
 	mailClient, err := mail.NewMailer(&mail.MailConfig{
-		Host:     config.GetString("MAIL_HOST", "localhost"),
-		Port:     config.GetInt("MAIL_PORT", 25),
-		Username: config.GetString("MAIL_USERNAME", ""),
-		Password: config.GetString("MAIL_PASSWORD", ""),
+		Host:     config.GetString("MAIL_HOST"),
+		Port:     config.GetInt("MAIL_PORT"),
+		Username: config.GetString("MAIL_USERNAME"),
+		Password: config.GetString("MAIL_PASSWORD"),
 		From:     config.GetString("MAIL_FROM", "ArticPad <"+config.GetString("MAIL_USERNAME", "")+">"),
-		ForceTLS: config.GetString("MAIL_FORCE_TLS", "false") == "true",
+		ForceTLS: config.GetString("MAIL_FORCE_TLS") == "true",
 	})
 	if err != nil || mailClient == nil {
 		logger.Fatal().Msgf("Mail server connection error: %s", err)
@@ -86,9 +86,9 @@ func Run() {
 	if !fiber.IsChild() {
 		logger.Info().Msgf("Starting ArticPad %s with isProduction: %t", config.Version, true)
 		logger.Info().Msgf("BuildTime: %s | Commit: %s", config.BuildTime, config.Commit)
-		logger.Info().Msgf("Listening on %s", config.GetString("APP_ADDR", ":8080"))
+		logger.Info().Msgf("Listening on %s", config.GetString("APP_ADDR"))
 	}
-	if err := app.Listen(config.GetString("APP_ADDR", ":8080")); err != nil {
+	if err := app.Listen(config.GetString("APP_ADDR")); err != nil {
 		logger.Fatal().Err(err).Msg("Error starting server")
 	}
 

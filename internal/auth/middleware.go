@@ -17,7 +17,7 @@ import (
 // Guards a specific endpoint in the API.
 func JWTMiddleware() fiber.Handler {
 	return jwtware.New(jwtware.Config{
-		SigningKey:   []byte(config.GetString("SECRET", "MyRandomSecureSecret")),
+		SigningKey:   []byte(config.GetString("SECRET")),
 		ErrorHandler: jwtError,
 	})
 }

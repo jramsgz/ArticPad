@@ -24,13 +24,13 @@ import (
 func startFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Mailer, i18n *i18n.I18n) *fiber.App {
 	// Set trusted proxies
 	var trustedProxies []string
-	if config.GetString("TRUSTED_PROXIES", "") != "" {
-		trustedProxies = strings.Split(config.GetString("TRUSTED_PROXIES", ""), ",")
+	if config.GetString("TRUSTED_PROXIES") != "" {
+		trustedProxies = strings.Split(config.GetString("TRUSTED_PROXIES"), ",")
 	}
 	var enableProxy bool = len(trustedProxies) > 0
 
 	// Creates a new Fiber instance.
-	var isProduction bool = config.GetString("DEBUG", "false") == "false"
+	var isProduction bool = config.GetString("DEBUG") == "false"
 	app := fiber.New(fiber.Config{
 		Prefork:                 isProduction,
 		ServerHeader:            "ArticPad Server " + config.Version,
@@ -46,7 +46,7 @@ func startFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Maile
 	}))
 	app.Use(cors.New(cors.Config{
 		MaxAge:       1800,
-		AllowOrigins: config.GetString("APP_URL", "http://localhost:8080"),
+		AllowOrigins: config.GetString("APP_URL"),
 	}))
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed, // 1
@@ -85,7 +85,7 @@ func startFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Maile
 
 	// Serve Single Page application on "/"
 	// assume static file at static folder
-	app.Static("/", config.GetString("STATIC_DIR", "static"), fiber.Static{
+	app.Static("/", config.GetString("STATIC_DIR"), fiber.Static{
 		Compress: true,
 		MaxAge:   3600,
 	})
@@ -97,7 +97,7 @@ func startFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Maile
 	})
 
 	app.Get("/*", func(ctx *fiber.Ctx) error {
-		return ctx.SendFile("./" + config.GetString("STATIC_DIR", "static") + "/index.html")
+		return ctx.SendFile("./" + config.GetString("STATIC_DIR") + "/index.html")
 	})
 
 	return app

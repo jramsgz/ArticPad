@@ -84,7 +84,7 @@ func Logger(log zerolog.Logger, filter func(*fiber.Ctx) bool) fiber.Handler {
 			// 2. panic() is called
 
 			// We only send the error to the client if DEBUG is not set
-			var isProduction bool = config.GetString("DEBUG", "false") == "false"
+			var isProduction bool = config.GetString("DEBUG") == "false"
 
 			// Status code defaults to 500
 			status := fiber.StatusInternalServerError
