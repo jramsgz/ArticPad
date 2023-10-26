@@ -48,6 +48,14 @@
             >
               {{ $t("common.retry") }}
             </button>
+            <div class="text-sm mt-3">
+              <router-link
+                to="/login"
+                class="font-medium text-indigo-400 hover:text-indigo-500"
+              >
+                {{ $t("auth.go_back_to_login") }}
+              </router-link>
+            </div>
           </div>
         </div>
       </div>
@@ -70,9 +78,21 @@ const verify = () => {
     router.push({ name: "login" });
   } else {
     isLoading.value = true;
-    authStore.verifyAccount(token).then(() => {
-      isLoading.value = false;
-    });
+    authStore
+      .verifyAccount(token)
+      .then(() => {
+        router.push("/login");
+        isLoading.value = false;
+      })
+      .catch((err) => {
+        if (
+          err?.response?.data?.error_code === "invalid_verification_token" ||
+          err?.response?.data?.error_code === "email_already_verified"
+        ) {
+          router.push({ name: "login" });
+        }
+        isLoading.value = false;
+      });
   }
 };
 

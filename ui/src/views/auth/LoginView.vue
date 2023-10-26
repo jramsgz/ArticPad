@@ -78,6 +78,18 @@
             </div>
           </div>
 
+          <div
+            v-if="form.login === lastUnverifiedUser && form.login !== ''"
+            class="text-sm flex items-center justify-center"
+          >
+            <button
+              class="font-medium text-indigo-400 hover:text-indigo-500 cursor-pointer"
+              @click="handleResendVerificationEmail"
+              :disabled="form.loading"
+            >
+              {{ $t("auth.resend_verification_email") }}
+            </button>
+          </div>
           <FormButton
             :text="$t('auth.sign_in')"
             :disabled="!form.login || !form.password"
@@ -91,12 +103,14 @@
 
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
-import { reactive } from "vue";
+import { reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 
 import FormButton from "@/components/common/FormButton.vue";
 import PasswordField from "@/components/common/PasswordField.vue";
 
 const authStore = useAuthStore();
+const router = useRouter();
 
 const form = reactive({
   login: "",
@@ -105,14 +119,42 @@ const form = reactive({
   loading: false,
 });
 
+let sentLogin = "";
+const lastUnverifiedUser = ref("");
+
 const handleSubmit = async (e: Event) => {
   e.preventDefault();
   form.loading = true;
-  authStore.login(form.login, form.password, form.remember_me).catch((err) => {
-    if (err?.response?.data?.error === "please verify your email address") {
-      console.log("please verify your email address");
-    }
-  });
+  sentLogin = form.login;
+  await authStore
+    .login(form.login, form.password, form.remember_me)
+    .then(() => {
+      // redirect to previous url or default to home page
+      const returnUrl = router.currentRoute.value.query.redirect as string;
+      // Dont redirect to logout page
+      if (returnUrl === "/logout") {
+        router.push("/");
+        return;
+      }
+
+      router.push(returnUrl || "/");
+    })
+    .catch((err) => {
+      if (err?.response?.data?.error_code === "email_not_verified") {
+        lastUnverifiedUser.value = sentLogin;
+      }
+    });
+  form.loading = false;
+};
+
+const handleResendVerificationEmail = async () => {
+  form.loading = true;
+  await authStore
+    .resendVerificationEmail(sentLogin)
+    .then(() => {
+      lastUnverifiedUser.value = "";
+    })
+    .catch(() => {});
   form.loading = false;
 };
 </script>

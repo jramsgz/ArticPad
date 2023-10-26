@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	ErrInvalidHash         = errors.New("the encoded hash is not in the correct format")
-	ErrIncompatibleVariant = errors.New("incompatible algorithm variant")
-	ErrIncompatibleVersion = errors.New("incompatible version of argon2")
+	ErrInvalidHash         = errors.New("argon2id: the encoded hash is not in the correct format")
+	ErrIncompatibleVariant = errors.New("argon2id: incompatible algorithm variant")
+	ErrIncompatibleVersion = errors.New("argon2id: incompatible version of argon2")
 )
 
 type Params struct {

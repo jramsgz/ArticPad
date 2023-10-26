@@ -2,13 +2,13 @@ package logging
 
 import (
 	"fmt"
-	"net/http"
 	"runtime/debug"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jramsgz/articpad/config"
+	"github.com/jramsgz/articpad/pkg/apierror"
 	"github.com/rs/zerolog"
 )
 
@@ -20,6 +20,7 @@ type logFields struct {
 	Path       string
 	Protocol   string
 	StatusCode int
+	ErrorCode  string
 	Latency    float64
 	Error      error
 	Stack      []byte
@@ -37,6 +38,9 @@ func (lf *logFields) MarshalZerologObject(e *zerolog.Event) {
 		Float64("latency", lf.Latency).
 		Str("tag", "request")
 
+	if lf.ErrorCode != "" {
+		e.Str("error_code", lf.ErrorCode)
+	}
 	if lf.Error != nil {
 		e.Err(lf.Error)
 	}
@@ -82,30 +86,43 @@ func Logger(log zerolog.Logger, filter func(*fiber.Ctx) bool) fiber.Handler {
 			// We only send the error to the client if DEBUG is not set
 			var isProduction bool = config.GetString("DEBUG", "false") == "false"
 
+			// Status code defaults to 500
+			status := fiber.StatusInternalServerError
+			// Message defaults to "Internal Server Error"
+			message := "Internal Server Error"
+			// Code defaults to "unknown_error"
+			code := "unknown_error"
+
 			// Check if c.Next() returned an error
 			if err != nil {
-				// Status code defaults to 500
-				code := fiber.StatusInternalServerError
-				// Message defaults to "Internal Server Error"
-				message := "Internal Server Error"
 
 				// Check if it's a fiber.Error
 				if e, ok := err.(*fiber.Error); ok {
 					// Override status code if fiber.Error type
+					status = e.Code
+					// If the error is not a server error, send the error message to the client
+					if !isProduction || (status >= 400 && status < 500) {
+						message = e.Message
+					}
+				} else if e, ok := err.(*apierror.Error); ok {
+					// Override status code and error code if apierror.Error type
+					status = e.Status
 					code = e.Code
 					// If the error is not a server error, send the error message to the client
-					if !isProduction || (code >= 400 && code < 500) {
+					if !isProduction || (status >= 400 && status < 500) || e.Show {
 						message = e.Message
 					}
 				}
 
+				fields.ErrorCode = code
 				fields.Error = err
 
 				// Send custom error page
-				c.Status(code).JSON(fiber.Map{
-					"success":   false,
-					"error":     message,
-					"requestId": rid,
+				c.Status(status).JSON(fiber.Map{
+					"success":    false,
+					"error_code": code,
+					"error":      message,
+					"requestId":  rid,
 				})
 			}
 
@@ -117,18 +134,19 @@ func Logger(log zerolog.Logger, filter func(*fiber.Ctx) bool) fiber.Handler {
 					err = fmt.Errorf("%v", rvr)
 				}
 
+				fields.ErrorCode = code
 				fields.Error = err
 				fields.Stack = debug.Stack()
 
-				message := "Internal Server Error"
 				if !isProduction {
 					message = err.Error()
 				}
 
-				c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-					"success":   false,
-					"error":     message,
-					"requestId": rid,
+				c.Status(status).JSON(fiber.Map{
+					"success":    false,
+					"error_code": code,
+					"error":      message,
+					"requestId":  rid,
 				})
 			}
 

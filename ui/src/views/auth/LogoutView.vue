@@ -39,7 +39,7 @@
           </div>
           <div v-else>
             <p class="mb-6 text-gray-200">
-              {{ $t("errors.logout_failed") }}
+              {{ $t("auth.are_you_sure_you_want_to_log_out") }}
             </p>
             <button
               type="button"
@@ -59,16 +59,12 @@
 import { useAuthStore } from "@/stores/auth";
 import { ref } from "vue";
 
-const isLoggingOut = ref(true);
+const isLoggingOut = ref(false);
 
 const authStore = useAuthStore();
-const logout = () => {
+const logout = async () => {
   isLoggingOut.value = true;
-  authStore.logout().then(() => {
-    isLoggingOut.value = false;
-  });
+  await authStore.logout();
+  isLoggingOut.value = false;
 };
-
-// Logout on mount
-logout();
 </script>

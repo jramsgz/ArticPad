@@ -19,7 +19,6 @@ func startI18n(localesPath string) (*i18n.I18n, error) {
 		return nil, err
 	}
 
-	fmt.Printf("Default language to load: %s\n", files[0].Name())
 	for _, file := range files {
 		if file.IsDir() {
 			continue

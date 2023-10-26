@@ -31,12 +31,20 @@ interface User {
   updatedAt: string;
 }
 
+function tryParseJSON(json: string) {
+  try {
+    return JSON.parse(json);
+  } catch (error) {
+    return JSON.parse("{}");
+  }
+}
+
 export const useAuthStore = defineStore({
   id: "auth",
   state: () => ({
     // Initialize state from local storage to avoid reset on page refresh
     token: getFromLocalStorage("token", null),
-    user: JSON.parse(getFromLocalStorage("user", "{}")) as User,
+    user: tryParseJSON(getFromLocalStorage("user", "{}")) as User,
     lastUpdatedAt: getFromLocalStorage("lastUpdatedAt", null),
   }),
   getters: {
@@ -77,7 +85,6 @@ export const useAuthStore = defineStore({
 
         router.push(returnUrl || "/");
       } catch (error) {
-        console.error(error);
         return handleError(error);
       }
     },
@@ -101,27 +108,30 @@ export const useAuthStore = defineStore({
 
         // Redirect to login page
         router.push("/login");
-      } catch (error) {
-        console.log(error);
-        handleError(error);
+      } catch (error: any) {
+        if (
+          error.response.data.error_code === "cannot_send_verification_email"
+        ) {
+          router.push("/login");
+        }
+        return handleError(error);
       }
     },
     async logout() {
       try {
         await axios.post("/auth/logout");
-
-        this.token = null;
-        this.lastUpdatedAt = null;
-        this.user = {} as User;
-        removeFromLocalStorage("token");
-        removeFromLocalStorage("lastUpdatedAt");
-        removeFromLocalStorage("user");
-
-        router.push("/login");
       } catch (error) {
-        console.error(error);
         handleError(error);
       }
+
+      this.token = null;
+      this.lastUpdatedAt = null;
+      this.user = {} as User;
+      removeFromLocalStorage("token");
+      removeFromLocalStorage("lastUpdatedAt");
+      removeFromLocalStorage("user");
+
+      router.push("/login");
     },
     async refreshToken() {},
     async requestPasswordReset(login: string) {
@@ -143,8 +153,7 @@ export const useAuthStore = defineStore({
         // Redirect to login page
         router.push("/login");
       } catch (error) {
-        console.error(error);
-        handleError(error);
+        return handleError(error);
       }
     },
     async resetPassword(token: string, password: string) {
@@ -167,8 +176,7 @@ export const useAuthStore = defineStore({
         // Redirect to login page
         router.push("/login");
       } catch (error) {
-        console.error(error);
-        handleError(error);
+        return handleError(error);
       }
     },
     async resendVerificationEmail(login: string) {
@@ -187,8 +195,7 @@ export const useAuthStore = defineStore({
           i18n.global.t("auth.account_verification_resent")
         );
       } catch (error) {
-        console.error(error);
-        handleError(error);
+        return handleError(error);
       }
     },
     async verifyAccount(token: string) {
@@ -208,8 +215,7 @@ export const useAuthStore = defineStore({
         // Redirect to login page
         router.push("/login");
       } catch (error) {
-        console.error(error);
-        handleError(error);
+        return handleError(error);
       }
     },
   },

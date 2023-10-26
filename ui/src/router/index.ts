@@ -30,6 +30,16 @@ router.beforeEach((to, from, next) => {
     });
     return;
   }
+  // Redirect based on redirect query param if user is logged in.
+  if (authStore.isLoggedIn && to.name === "login") {
+    const redirect = to.query.redirect as string;
+    if (redirect) {
+      next(redirect);
+      return;
+    }
+    next({ name: "home" });
+    return;
+  }
   // Redirect to home if user is logged in and tries to access auth routes.
   if (
     authStore.isLoggedIn &&

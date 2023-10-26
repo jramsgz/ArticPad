@@ -119,10 +119,19 @@ const handleSubmit = async (e: Event) => {
   e.preventDefault();
   form.loading = true;
   if (token && typeof token === "string") {
-    await authStore.resetPassword(token, form.password);
-    router.push("/login");
+    await authStore
+      .resetPassword(token, form.password)
+      .then(() => {
+        router.push("/login");
+      })
+      .catch(() => {});
   } else {
-    await authStore.requestPasswordReset(form.login);
+    await authStore
+      .requestPasswordReset(form.login)
+      .then(() => {
+        router.push("/login");
+      })
+      .catch(() => {});
   }
   form.loading = false;
 };

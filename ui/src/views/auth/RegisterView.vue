@@ -118,11 +118,13 @@
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
 import { reactive } from "vue";
+import { useRouter } from "vue-router";
 
 import FormButton from "@/components/common/FormButton.vue";
 import PasswordField from "@/components/common/PasswordField.vue";
 
 const authStore = useAuthStore();
+const router = useRouter();
 
 const form = reactive({
   username: "",
@@ -135,7 +137,16 @@ const form = reactive({
 const handleSubmit = async (e: Event) => {
   e.preventDefault();
   form.loading = true;
-  await authStore.register(form.username, form.email, form.password);
+  await authStore
+    .register(form.username, form.email, form.password)
+    .then(() => {
+      router.push("/login");
+    })
+    .catch((error) => {
+      if (error.response.data.error_code === "cannot_send_verification_email") {
+        router.push("/login");
+      }
+    });
   form.loading = false;
 };
 </script>

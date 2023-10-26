@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/jramsgz/articpad/config"
+	"github.com/jramsgz/articpad/internal/utils/consts"
+	"github.com/jramsgz/articpad/pkg/apierror"
 
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
@@ -23,9 +25,9 @@ func JWTMiddleware() fiber.Handler {
 // JWT error message.
 func jwtError(c *fiber.Ctx, err error) error {
 	if err.Error() == "Missing or malformed JWT" {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeInvalidJWT, "Missing or malformed JWT")
 	}
-	return fiber.NewError(fiber.StatusBadRequest, "Invalid or expired JWT")
+	return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeInvalidJWT, "Invalid or expired JWT")
 }
 
 // Gets user data (their ID) from the JWT middleware. Should be executed after calling 'JWTMiddleware()'.
@@ -36,7 +38,7 @@ func GetDataFromJWT(c *fiber.Ctx) error {
 	parsedUserID := claims["uid"].(string)
 	userID, err := strconv.Atoi(parsedUserID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
 
 	// Go to next.
