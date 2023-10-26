@@ -3,11 +3,9 @@ package user
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jramsgz/articpad/internal/utils/consts"
 	"gorm.io/gorm"
 )
 
@@ -113,17 +111,13 @@ func (r *dbRepository) GetFirstUser(ctx context.Context) (*User, error) {
 	return user, nil
 }
 
-// Verifies a user given its verification token.
-func (r *dbRepository) VerifyUser(ctx context.Context, verificationToken string) error {
+// GetUserByVerificationToken returns a user by its verification token.
+func (r *dbRepository) GetUserByVerificationToken(ctx context.Context, verificationToken string) (*User, error) {
 	user := &User{}
 
 	result := r.db.WithContext(ctx).Where("verification_token = ?", verificationToken).First(user)
 	if result.Error != nil {
-		return result.Error
-	}
-
-	if user.VerifiedAt.Valid && user.VerifiedAt.Time.Before(time.Now()) {
-		return errors.New(consts.ErrEmailAlreadyVerified)
+		return nil, result.Error
 	}
 
 	user.VerifiedAt = sql.NullTime{
@@ -133,10 +127,10 @@ func (r *dbRepository) VerifyUser(ctx context.Context, verificationToken string)
 
 	result = r.db.WithContext(ctx).Save(user)
 	if result.Error != nil {
-		return result.Error
+		return nil, result.Error
 	}
 
-	return nil
+	return user, nil
 }
 
 // Sets the password reset token for a user.
@@ -169,10 +163,6 @@ func (r *dbRepository) GetUserByPasswordResetToken(ctx context.Context, token st
 	result := r.db.WithContext(ctx).Where("password_reset_token = ?", token).First(user)
 	if result.Error != nil {
 		return nil, result.Error
-	}
-
-	if user.PasswordResetExpiresAt.Before(time.Now()) {
-		return nil, errors.New(consts.ErrPasswordResetTokenExpired)
 	}
 
 	return user, nil

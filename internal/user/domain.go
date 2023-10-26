@@ -54,7 +54,7 @@ type UserRepository interface {
 	UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 	GetFirstUser(ctx context.Context) (*User, error)
-	VerifyUser(ctx context.Context, verificationToken string) error
+	GetUserByVerificationToken(ctx context.Context, verificationToken string) (*User, error)
 	SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error
 	GetUserByPasswordResetToken(ctx context.Context, token string) (*User, error)
 }

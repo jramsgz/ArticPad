@@ -111,8 +111,15 @@ func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsern
 
 // Implementation of 'VerifyUser'.
 func (s *userService) VerifyUser(ctx context.Context, verificationToken string) error {
-	err := s.userRepository.VerifyUser(ctx, verificationToken)
-	return err
+	user, err := s.userRepository.GetUserByVerificationToken(ctx, verificationToken)
+	if err != nil {
+		return err
+	}
+
+	if user.VerifiedAt.Valid && user.VerifiedAt.Time.Before(time.Now()) {
+		return errors.New(consts.ErrEmailAlreadyVerified)
+	}
+	return nil
 }
 
 // Implementation of 'SetPasswordResetToken'.
@@ -127,8 +134,23 @@ func (s *userService) ResetPassword(ctx context.Context, token string, newPasswo
 		return err
 	}
 
+	if user.PasswordResetExpiresAt.Before(time.Now()) {
+		return errors.New(consts.ErrPasswordResetTokenExpired)
+	}
+
 	user.Password = newPassword
 	user.PasswordResetExpiresAt = time.Now()
+
+	err = s.validateUser(ctx, user)
+	if err != nil {
+		return err
+	}
+
+	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
+	if err != nil {
+		return err
+	}
+	user.Password = hashedPassword
 
 	return s.userRepository.UpdateUser(ctx, user.ID, user)
 }
