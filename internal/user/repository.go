@@ -3,9 +3,11 @@ package user
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jramsgz/articpad/internal/utils/consts"
 	"gorm.io/gorm"
 )
 
@@ -49,9 +51,14 @@ func (r *dbRepository) GetUser(ctx context.Context, userID uuid.UUID) (*User, er
 func (r *dbRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	user := &User{}
 
-	result := r.db.WithContext(ctx).Where("email = ?", email).First(user)
+	// Also include deleted users.
+	result := r.db.WithContext(ctx).Unscoped().Where("email = ?", email).First(user)
 	if result.Error != nil {
 		return nil, result.Error
+	}
+
+	if user.DeletedAt.Valid {
+		return nil, errors.New(consts.ErrDeletedRecord)
 	}
 
 	return user, nil
@@ -61,9 +68,13 @@ func (r *dbRepository) GetUserByEmail(ctx context.Context, email string) (*User,
 func (r *dbRepository) GetUserByUsername(ctx context.Context, username string) (*User, error) {
 	user := &User{}
 
-	result := r.db.WithContext(ctx).Where("username = ?", username).First(user)
+	result := r.db.WithContext(ctx).Unscoped().Where("username = ?", username).First(user)
 	if result.Error != nil {
 		return nil, result.Error
+	}
+
+	if user.DeletedAt.Valid {
+		return nil, errors.New(consts.ErrDeletedRecord)
 	}
 
 	return user, nil

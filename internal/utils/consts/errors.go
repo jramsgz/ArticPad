@@ -20,6 +20,9 @@ const (
 	ErrPasswordStrength                  = "password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
 	ErrEmailAlreadyVerified              = "user is already verified"
 	ErrPasswordResetTokenExpired         = "password reset token has expired"
+	ErrDeletedRecord                     = "record has been deleted"
+	ErrUsernameDeactivated               = "username has been deactivated"
+	ErrEmailDeactivated                  = "email has been deactivated"
 )
 
 // These are the defined error codes returned by the API, most of them are related to errors defined by this package
@@ -47,6 +50,8 @@ const (
 	ErrCodeInvalidJWT                            = "invalid_jwt"
 	ErrCodeInvalidPasswordResetToken             = "invalid_password_reset_token"
 	ErrCodeInvalidVerificationToken              = "invalid_verification_token"
+	ErrCodeUsernameDeactivated                   = "username_deactivated"
+	ErrCodeEmailDeactivated                      = "email_deactivated"
 )
 
 // appError is a struct that contains the data of an error returned by the API.
@@ -71,6 +76,8 @@ var errorsMap = map[string]appError{
 	ErrPasswordStrength:                  {Status: fiber.StatusUnprocessableEntity, Code: ErrCodePasswordStrengthCode, Message: "errors.password_not_strong_enough"},
 	ErrEmailAlreadyVerified:              {Status: fiber.StatusUnprocessableEntity, Code: ErrCodeEmailAlreadyVerifiedCode, Message: "errors.email_already_verified"},
 	ErrPasswordResetTokenExpired:         {Status: fiber.StatusUnprocessableEntity, Code: ErrCodePasswordResetTokenExpired, Message: "errors.password_reset_token_expired"},
+	ErrUsernameDeactivated:               {Status: fiber.StatusUnprocessableEntity, Code: ErrCodeUsernameDeactivated, Message: "errors.username_deactivated"},
+	ErrEmailDeactivated:                  {Status: fiber.StatusUnprocessableEntity, Code: ErrCodeEmailDeactivated, Message: "errors.email_deactivated"},
 }
 
 // MapApiError maps an error to the corresponding API error if possible.

@@ -163,6 +163,18 @@ const errorMap: ErrorMap = {
     setMessage: false,
     setFooter: false,
   },
+  username_deactivated: {
+    title: "errors.invalid_username",
+    message: "errors.username_deactivated",
+    setMessage: false,
+    setFooter: false,
+  },
+  email_deactivated: {
+    title: "errors.invalid_email",
+    message: "errors.email_deactivated",
+    setMessage: false,
+    setFooter: false,
+  },
   unknown_error: {
     title: "errors.unknown",
     message: "errors.unknown",

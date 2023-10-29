@@ -54,6 +54,9 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 
 	foundUser, err := s.GetUserByEmail(ctx, user.Email)
 	if err != nil && err != gorm.ErrRecordNotFound {
+		if err.Error() == consts.ErrDeletedRecord {
+			return errors.New(consts.ErrEmailDeactivated)
+		}
 		return err
 	}
 	if foundUser != nil {
@@ -62,6 +65,9 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 
 	foundUser, err = s.GetUserByUsername(ctx, user.Username)
 	if err != nil && err != gorm.ErrRecordNotFound {
+		if err.Error() == consts.ErrDeletedRecord {
+			return errors.New(consts.ErrUsernameDeactivated)
+		}
 		return err
 	}
 	if foundUser != nil {

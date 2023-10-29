@@ -32,10 +32,13 @@
     "errors.username_already_exists": "Username already in use",
     "errors.username_contains_invalid_characters": "Username must only contain letters, numbers, dashes, underscores and dots",
     "errors.username_too_short": "Username must be at least 3 characters",
-    "erros.mail_not_enabled": "Email is not enabled on this server",
-    "erros.username_too_long": "Username must be at most 32 characters",
+    "errors.mail_not_enabled": "Email is not enabled on this server",
+    "errors.username_too_long": "Username must be at most 32 characters",
+    "errors.username_deactivated": "This username has been deactivated",
+    "errors.email_deactivated": "This email address has been deactivated",
     "messages.account_created": "Your account was created. Please verify your email address before logging in.",
     "messages.account_verified": "Your email address has been verified. You can now log in.",
     "messages.password_reset_email_sent": "You will receive a password recovery link valid for 4 hours at your email address in a few minutes",
-    "messages.verification_email_sent": "A verification email has been sent to your email address. Please verify your email address before logging in."
+    "messages.verification_email_sent": "A verification email has been sent to your email address. Please verify your email address before logging in.",
+    "messages.password_reset": "Your password has been reset. You can now log in."
 }

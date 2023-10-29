@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"database/sql"
-	"net/mail"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,6 +25,13 @@ type AuthHandler struct {
 	i18n        *i18n.I18n
 }
 
+type jwtClaims struct {
+	UserID string `json:"uid"`
+	User   string `json:"user"`
+	UserIP string `json:"user_ip"`
+	jwt.RegisteredClaims
+}
+
 // Creates a new authentication handler.
 func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailClient.Mailer, i18n *i18n.I18n) {
 	handler := &AuthHandler{
@@ -43,6 +49,12 @@ func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailClien
 	authRoute.Post("/reset", handler.resetPassword)
 	authRoute.Get("/refresh", JWTMiddleware(), handler.refreshToken) // TODO
 	authRoute.Get("/me", JWTMiddleware(), handler.getMe)             // TODO
+	authRoute.Get("/test", handler.test)                             // TODO
+}
+
+func (h *AuthHandler) test(c *fiber.Ctx) error {
+	err := h.userService.DeleteUser(context.Background(), uuid.MustParse("ba5a7785-e31b-4159-be63-9658e67866fc"))
+	return c.JSON(err)
 }
 
 // Signs in a user and gives them a JWT.
@@ -50,13 +62,6 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	type loginRequest struct {
 		Login    string `json:"login"`
 		Password string `json:"password"`
-	}
-
-	type jwtClaims struct {
-		UserID string `json:"uid"`
-		User   string `json:"user"`
-		UserIP string `json:"user_ip"`
-		jwt.RegisteredClaims
 	}
 
 	customContext, cancel := context.WithCancel(context.Background())
@@ -70,7 +75,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
 
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
-	if err != nil && err == gorm.ErrRecordNotFound {
+	if err != nil && (err == gorm.ErrRecordNotFound || err.Error() == consts.ErrDeletedRecord) {
 		return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
 	} else if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
@@ -128,21 +133,15 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeBadRequest, err.Error())
 	}
 
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
-
-	parsedEmail, err := mail.ParseAddress(request.Email)
-	if err != nil || (err == nil && len(parsedEmail.Address) > 100) {
-		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeInvalidEmail, h.i18n.T(langCode, "errors.invalid_email"))
-	}
-
 	isAdmin := false
 	if ok, _ := h.userService.IsFirstUser(customContext); ok {
 		isAdmin = true
 	}
 
+	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
 	user := &user.User{
 		Username:          request.Username,
-		Email:             parsedEmail.Address,
+		Email:             request.Email,
 		Password:          request.Password,
 		VerifiedAt:        sql.NullTime{Valid: false, Time: time.Time{}},
 		VerificationToken: uuid.New().String(),
@@ -150,7 +149,7 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		Lang:              h.i18n.ParseLanguage(c.Get("Accept-Language")),
 	}
 
-	err = h.userService.CreateUser(customContext, user)
+	err := h.userService.CreateUser(customContext, user)
 	if err != nil {
 		return consts.MapApiError(err, h.i18n, langCode)
 	}
@@ -182,13 +181,6 @@ func (h *AuthHandler) logOutUser(c *fiber.Ctx) error {
 
 // Refreshes a JWT.
 func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
-	type jwtClaims struct {
-		UserID string `json:"uid"`
-		User   string `json:"user"`
-		UserIP string `json:"user_ip"`
-		jwt.RegisteredClaims
-	}
-
 	jwtData := c.Locals("user").(*jwt.Token)
 	claims := jwtData.Claims.(jwt.MapClaims)
 
@@ -223,11 +215,17 @@ func (h *AuthHandler) getMe(c *fiber.Ctx) error {
 	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	jwtData := c.Locals("user").(*jwt.Token)
-	claims := jwtData.Claims.(jwt.MapClaims)
+	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
 
-	user, err := h.userService.GetUser(customContext, claims["uid"].(uuid.UUID))
+	userToken := c.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userID := claims["uid"].(string)
+
+	user, err := h.userService.GetUser(customContext, uuid.MustParse(userID))
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return apierror.NewApiError(fiber.StatusUnauthorized, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
+		}
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
 
@@ -260,7 +258,7 @@ func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
 
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == gorm.ErrRecordNotFound || err.Error() == consts.ErrDeletedRecord {
 			return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
 		}
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
@@ -324,7 +322,7 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == gorm.ErrRecordNotFound || err.Error() == consts.ErrDeletedRecord {
 			return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
 		}
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
@@ -379,7 +377,7 @@ func (h *AuthHandler) resetPassword(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"success": true,
-		"message": "Your password has been reset successfully",
+		"message": h.i18n.T(langCode, "messages.password_reset"),
 	})
 }
 

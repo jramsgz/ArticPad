@@ -1,10 +1,6 @@
 package auth
 
 import (
-	"context"
-	"net/mail"
-	"strconv"
-
 	"github.com/jramsgz/articpad/config"
 	"github.com/jramsgz/articpad/internal/utils/consts"
 	"github.com/jramsgz/articpad/pkg/apierror"
@@ -36,39 +32,8 @@ func GetDataFromJWT(c *fiber.Ctx) error {
 	jwtData := c.Locals("user").(*jwt.Token)
 	claims := jwtData.Claims.(jwt.MapClaims)
 	parsedUserID := claims["uid"].(string)
-	userID, err := strconv.Atoi(parsedUserID)
-	if err != nil {
-		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
-	}
 
 	// Go to next.
-	c.Locals("currentUser", userID)
-	return c.Next()
-}
-
-// If user does not exist, do not allow one to access the API.
-func (h *AuthHandler) checkIfUserExistsMiddleware(c *fiber.Ctx) error {
-	// Create a new customized context.
-	customContext, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Fetch parameter.
-	targetedUserEmail := c.Params("email")
-	parsedEmail, err := mail.ParseAddress(targetedUserEmail)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid email address")
-	}
-
-	// Check if user exists.
-	searchedUser, err := h.userService.GetUserByEmail(customContext, parsedEmail.Address)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-	if searchedUser == nil {
-		return fiber.NewError(fiber.StatusBadRequest, "There is no user with this email!")
-	}
-
-	// Store in locals for further processing in the real handler.
-	c.Locals("userID", searchedUser.ID)
+	c.Locals("currentUser", parsedUserID)
 	return c.Next()
 }
