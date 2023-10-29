@@ -103,7 +103,8 @@ func (r *dbRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 func (r *dbRepository) GetFirstUser(ctx context.Context) (*User, error) {
 	user := &User{}
 
-	result := r.db.WithContext(ctx).First(user)
+	// Sort by creation date.
+	result := r.db.WithContext(ctx).Order("created_at ASC").First(user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -120,6 +121,18 @@ func (r *dbRepository) GetUserByVerificationToken(ctx context.Context, verificat
 		return nil, result.Error
 	}
 
+	return user, nil
+}
+
+// SetUserVerified verifies a user by its ID.
+func (r *dbRepository) SetUserVerified(ctx context.Context, userID uuid.UUID) error {
+	user := &User{}
+
+	result := r.db.WithContext(ctx).Where("id = ?", userID).First(user)
+	if result.Error != nil {
+		return result.Error
+	}
+
 	user.VerifiedAt = sql.NullTime{
 		Time:  time.Now(),
 		Valid: true,
@@ -127,10 +140,10 @@ func (r *dbRepository) GetUserByVerificationToken(ctx context.Context, verificat
 
 	result = r.db.WithContext(ctx).Save(user)
 	if result.Error != nil {
-		return nil, result.Error
+		return result.Error
 	}
 
-	return user, nil
+	return nil
 }
 
 // Sets the password reset token for a user.

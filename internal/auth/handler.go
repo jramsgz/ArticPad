@@ -83,7 +83,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	}
 
 	if config.GetString("ENABLE_MAIL") == "true" {
-		if !user.VerifiedAt.Valid || user.VerifiedAt.Time.IsZero() || user.VerifiedAt.Time.Before(time.Now()) {
+		if !user.VerifiedAt.Valid || user.VerifiedAt.Time.IsZero() || user.VerifiedAt.Time.After(time.Now()) {
 			return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeEmailNotVerified, h.i18n.T(langCode, "errors.email_not_verified"))
 		}
 	}

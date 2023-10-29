@@ -52,6 +52,22 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 		return err
 	}
 
+	foundUser, err := s.GetUserByEmail(ctx, user.Email)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	if foundUser != nil {
+		return errors.New(consts.ErrEmailAlreadyExists)
+	}
+
+	foundUser, err = s.GetUserByUsername(ctx, user.Username)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	if foundUser != nil {
+		return errors.New(consts.ErrUsernameAlreadyExists)
+	}
+
 	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
 	if err != nil {
 		return err
@@ -119,6 +135,12 @@ func (s *userService) VerifyUser(ctx context.Context, verificationToken string) 
 	if user.VerifiedAt.Valid && user.VerifiedAt.Time.Before(time.Now()) {
 		return errors.New(consts.ErrEmailAlreadyVerified)
 	}
+
+	err = s.userRepository.SetUserVerified(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -171,22 +193,6 @@ func (s *userService) validateUser(ctx context.Context, user *User) error {
 	passwordValidator := validator.DefaultPasswordValidator([]string{user.Username, user.Email})
 	if err := passwordValidator.Validate(user.Password); err != nil {
 		return err
-	}
-
-	foundUser, err := s.GetUserByEmail(ctx, user.Email)
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return err
-	}
-	if foundUser != nil {
-		return errors.New(consts.ErrEmailAlreadyExists)
-	}
-
-	foundUser, err = s.GetUserByUsername(ctx, user.Username)
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return err
-	}
-	if foundUser != nil {
-		return errors.New(consts.ErrUsernameAlreadyExists)
 	}
 
 	return nil
