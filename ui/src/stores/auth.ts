@@ -74,16 +74,6 @@ export const useAuthStore = defineStore({
         this.token = response.data.token;
         this.lastUpdatedAt = updatedDate;
         this.user = response.data.user;
-
-        // redirect to previous url or default to home page
-        const returnUrl = router.currentRoute.value.query.redirect as string;
-        // Dont redirect to logout page
-        if (returnUrl === "/logout") {
-          router.push("/");
-          return;
-        }
-
-        router.push(returnUrl || "/");
       } catch (error) {
         return handleError(error);
       }
@@ -105,15 +95,7 @@ export const useAuthStore = defineStore({
           i18n.global.t("auth.sign_up"),
           i18n.global.t("auth.account_created")
         );
-
-        // Redirect to login page
-        router.push("/login");
       } catch (error: any) {
-        if (
-          error.response.data.error_code === "cannot_send_verification_email"
-        ) {
-          router.push("/login");
-        }
         return handleError(error);
       }
     },
@@ -149,9 +131,6 @@ export const useAuthStore = defineStore({
           i18n.global.t("auth.password_reset_requested"),
           i18n.global.t("auth.password_reset_requested_msg")
         );
-
-        // Redirect to login page
-        router.push("/login");
       } catch (error) {
         return handleError(error);
       }
@@ -172,9 +151,6 @@ export const useAuthStore = defineStore({
           i18n.global.t("routes.password_reset"),
           i18n.global.t("auth.password_reset_success")
         );
-
-        // Redirect to login page
-        router.push("/login");
       } catch (error) {
         return handleError(error);
       }
@@ -211,9 +187,6 @@ export const useAuthStore = defineStore({
           i18n.global.t("auth.account_verification"),
           i18n.global.t("auth.account_verified_successfully")
         );
-
-        // Redirect to login page
-        router.push("/login");
       } catch (error) {
         return handleError(error);
       }

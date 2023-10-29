@@ -61,7 +61,7 @@ func Run() {
 		Port:     config.GetInt("MAIL_PORT"),
 		Username: config.GetString("MAIL_USERNAME"),
 		Password: config.GetString("MAIL_PASSWORD"),
-		From:     config.GetString("MAIL_FROM", "ArticPad <"+config.GetString("MAIL_USERNAME", "")+">"),
+		From:     config.GetString("MAIL_FROM", "ArticPad <"+config.GetString("MAIL_USERNAME")+">"),
 		ForceTLS: config.GetString("MAIL_FORCE_TLS") == "true",
 	})
 	if err != nil || mailClient == nil {

@@ -41,6 +41,7 @@ var defaults = map[string]string{
 	"SECRET":          "MyRandomSecureSecret",
 	"TRUSTED_PROXIES": "",
 	"TEMPLATES_DIR":   "templates",
+	"LOCALES_DIR":     "locales",
 }
 
 // LoadEnv loads the .env file, this should be called before using GetString or GetInt functions
@@ -56,7 +57,11 @@ func GetString(key string, defaultValue ...string) string {
 			return value
 		}
 	}
-	return defaultValue[0]
+
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+	return ""
 }
 
 // GetInt func to get int value from environment variable
@@ -68,7 +73,11 @@ func GetInt(key string, defaultValue ...int) int {
 			}
 		}
 	}
-	return defaultValue[0]
+
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+	return 0
 }
 
 func loadDefaults() {
