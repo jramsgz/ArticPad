@@ -24,20 +24,18 @@
 
     <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-        <form class="space-y-6" @submit.prevent="handleSubmit">
+        <form class="space-y-6" @submit="onSubmit">
           <div>
             <label for="login" class="block text-sm font-medium text-gray-300">
               {{ $t("auth.email_address_or_username") }}
             </label>
             <div class="mt-1">
-              <input
-                v-model="form.login"
+              <InputText
                 id="login"
                 name="login"
                 type="text"
-                autocomplete="email"
+                autocomplete="login"
                 required
-                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
           </div>
@@ -50,20 +48,26 @@
               {{ $t("auth.password") }}
             </label>
             <div class="mt-1">
-              <PasswordField v-model="form.password" />
+              <InputText
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="password"
+                required
+              />
             </div>
           </div>
 
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <input
-                v-model="form.remember_me"
-                id="remember-me"
-                name="remember-me"
+                v-model="remember_me"
+                id="remember_me"
+                name="remember_me"
                 type="checkbox"
                 class="h-4 w-4 bg-gray-700 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
-              <label for="remember-me" class="ml-2 block text-sm text-gray-100">
+              <label for="remember_me" class="ml-2 block text-sm text-gray-100">
                 {{ $t("auth.remember_me") }}
               </label>
             </div>
@@ -79,21 +83,24 @@
           </div>
 
           <div
-            v-if="form.login === lastUnverifiedUser && form.login !== ''"
+            v-if="values.login === lastUnverifiedUser && values.login !== ''"
             class="text-sm flex items-center justify-center"
           >
             <button
-              class="font-medium text-indigo-400 hover:text-indigo-500 cursor-pointer"
+              :class="
+                'font-medium text-indigo-400 hover:text-indigo-500' +
+                (isSubmitting ? ' animate-pulse cursor-wait' : 'cursor-pointer')
+              "
               @click="handleResendVerificationEmail"
-              :disabled="form.loading"
+              :disabled="isSubmitting"
             >
               {{ $t("auth.resend_verification_email") }}
             </button>
           </div>
           <FormButton
             :text="$t('auth.sign_in')"
-            :disabled="!form.login || !form.password"
-            :loading="form.loading"
+            :disabled="Object.keys(errors).length > 0"
+            :loading="isSubmitting"
           />
         </form>
       </div>
@@ -103,31 +110,39 @@
 
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
-import { reactive, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useForm, useField } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import { z } from "zod";
+import { requiredStringSchema } from "@/utils/validation-schemas";
 
-import FormButton from "@/components/common/FormButton.vue";
-import PasswordField from "@/components/common/PasswordField.vue";
+import FormButton from "@/components/common/forms/FormButton.vue";
+import InputText from "@/components/common/forms/InputText.vue";
 
 const authStore = useAuthStore();
 const router = useRouter();
 
-const form = reactive({
-  login: "",
-  password: "",
-  remember_me: true,
-  loading: false,
+const schema = toTypedSchema(
+  z.object({
+    login: requiredStringSchema,
+    password: requiredStringSchema,
+    remember_me: z.boolean().optional(),
+  })
+);
+
+const { errors, handleSubmit, isSubmitting, values } = useForm({
+  validationSchema: schema,
 });
+const { value: remember_me } = useField("remember_me");
 
 let sentLogin = "";
 const lastUnverifiedUser = ref("");
 
-const handleSubmit = async (e: Event) => {
-  e.preventDefault();
-  form.loading = true;
-  sentLogin = form.login;
+const onSubmit = handleSubmit(async (values) => {
+  sentLogin = values.login;
   await authStore
-    .login(form.login, form.password, form.remember_me)
+    .login(values.login, values.password, values.remember_me)
     .then(() => {
       // redirect to previous url or default to home page
       const returnUrl = router.currentRoute.value.query.redirect as string;
@@ -144,17 +159,16 @@ const handleSubmit = async (e: Event) => {
         lastUnverifiedUser.value = sentLogin;
       }
     });
-  form.loading = false;
-};
+});
 
 const handleResendVerificationEmail = async () => {
-  form.loading = true;
+  isSubmitting.value = true;
   await authStore
     .resendVerificationEmail(sentLogin)
     .then(() => {
       lastUnverifiedUser.value = "";
     })
     .catch(() => {});
-  form.loading = false;
+  isSubmitting.value = false;
 };
 </script>

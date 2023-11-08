@@ -39,7 +39,7 @@
           </div>
           <div v-else>
             <p class="mb-6 text-gray-200">
-              {{ $t("auth.are_you_sure_you_want_to_log_out") }}
+              {{ $t("auth.are_you_sure_you_want_to_sign_out") }}
             </p>
             <button
               type="button"
@@ -48,6 +48,14 @@
             >
               {{ $t("auth.sign_out") }}
             </button>
+            <div class="mt-4">
+              <router-link
+                to="/"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-700 hover:bg-gray-600 transition ease-in-out duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                {{ $t("common.go_back") }}
+              </router-link>
+            </div>
           </div>
         </div>
       </div>

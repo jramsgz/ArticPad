@@ -15,20 +15,17 @@
 
     <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-        <form v-if="!token" class="space-y-4" @submit.prevent="handleSubmit">
+        <form v-if="!token" class="space-y-4" @submit="onSubmit">
           <div>
             <label for="login" class="block text-sm font-medium text-gray-300">
               {{ $t("auth.email_address_or_username") }}
             </label>
             <div class="mt-1">
-              <input
-                v-model="form.login"
+              <InputText
                 id="login"
                 name="login"
                 type="text"
-                autocomplete="email"
-                required
-                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                autocomplete="login"
               />
             </div>
           </div>
@@ -46,11 +43,11 @@
 
           <FormButton
             :text="$t('auth.reset_password')"
-            :disabled="!form.login"
-            :loading="form.loading"
+            :disabled="Object.keys(errors).length > 0"
+            :loading="isSubmitting"
           />
         </form>
-        <form v-else class="space-y-4" @submit.prevent="handleSubmit">
+        <form v-else class="space-y-4" @submit="onSubmit">
           <div>
             <label
               for="password"
@@ -59,7 +56,13 @@
               {{ $t("auth.new_password") }}
             </label>
             <div class="mt-1">
-              <PasswordField v-model="form.password" />
+              <InputText
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="password"
+                required
+              />
             </div>
           </div>
 
@@ -71,22 +74,19 @@
               {{ $t("auth.confirm_new_password") }}
             </label>
             <div class="mt-1">
-              <input
-                v-model="form.confirm_password"
-                id="confirm-password"
-                name="confirm-password"
+              <InputText
+                id="confirm_password"
+                name="confirm_password"
                 type="password"
-                autocomplete="confirm-password"
                 required
-                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
           </div>
 
           <FormButton
             :text="$t('auth.reset_password')"
-            :disabled="!form.password || !form.confirm_password"
-            :loading="form.loading"
+            :disabled="Object.keys(errors).length > 0"
+            :loading="isSubmitting"
           />
         </form>
       </div>
@@ -96,43 +96,69 @@
 
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
-import { reactive } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import { z } from "zod";
+import {
+  passwordSchema,
+  requiredStringSchema,
+} from "@/utils/validation-schemas";
 
-import FormButton from "@/components/common/FormButton.vue";
-import PasswordField from "@/components/common/PasswordField.vue";
+import FormButton from "@/components/common/forms/FormButton.vue";
+import InputText from "@/components/common/forms/InputText.vue";
 
 const authStore = useAuthStore();
 const router = useRouter();
 
 const token = router.currentRoute.value.params.token;
 
-const form = reactive({
-  login: "",
-  password: "",
-  confirm_password: "",
-  showPassword: false,
-  loading: false,
+const requestSchema = toTypedSchema(
+  z.object({
+    login: requiredStringSchema,
+  })
+);
+
+const resetPasswordSchema = toTypedSchema(
+  z
+    .object({
+      password: passwordSchema,
+      confirm_password: requiredStringSchema,
+    })
+    .superRefine(({ password, confirm_password }, ctx) => {
+      if (password !== confirm_password) {
+        ctx.addIssue({
+          code: "custom",
+          message: "errors.confirm_password_mismatch",
+          path: ["confirm_password"],
+        });
+      }
+    })
+);
+
+const currentSchema = computed(() =>
+  token && typeof token === "string" ? resetPasswordSchema : requestSchema
+);
+const { errors, handleSubmit, isSubmitting } = useForm({
+  validationSchema: currentSchema,
 });
 
-const handleSubmit = async (e: Event) => {
-  e.preventDefault();
-  form.loading = true;
+const onSubmit = handleSubmit(async (values) => {
   if (token && typeof token === "string") {
     await authStore
-      .resetPassword(token, form.password)
+      .resetPassword(token, values.password)
       .then(() => {
         router.push("/login");
       })
       .catch(() => {});
   } else {
     await authStore
-      .requestPasswordReset(form.login)
+      .requestPasswordReset(values.login)
       .then(() => {
         router.push("/login");
       })
       .catch(() => {});
   }
-  form.loading = false;
-};
+});
 </script>

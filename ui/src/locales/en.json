@@ -4,7 +4,7 @@
         "account_verification": "Account verification",
         "account_verification_resent": "A new verification email has been sent to the email address associated with your account",
         "account_verified_successfully": "Account verified successfully, you can now log in",
-        "are_you_sure_you_want_to_log_out": "Are you sure you want to log out?",
+        "are_you_sure_you_want_to_sign_out": "Are you sure you want to sign out?",
         "by_clicking_you_agree_to_our": "By clicking \"Sign up\" you agree to our",
         "confirm_new_password": "Confirm new password",
         "confirm_password": "Confirm password",
@@ -34,11 +34,14 @@
         "loading": "Loading",
         "or": "Or",
         "privacy_policy": "Privacy Policy",
-        "retry": "Retry"
+        "retry": "Retry",
+        "go_back": "Go back",
+        "toggle_password_visibility": "Toggle password visibility"
     },
     "errors": {
+        "error": "Error",
         "account_not_found": "Account not found",
-        "account_not_found_msg": "The account you are trying to log in to does not exist",
+        "account_not_found_msg": "The account you are trying to log into does not exist",
         "account_verification_failed": "Account verification failed",
         "already_verified": "Account is already verified",
         "bad_request": "Bad request",
@@ -84,7 +87,13 @@
         "username_in_use": "Username is already in use",
         "username_too_long": "Username must be at most 32 characters",
         "username_too_short": "Username must be at least 3 characters",
-        "verify_email_failed": "An error occurred while verifying your email address"
+        "verify_email_failed": "An error occurred while verifying your email address",
+        "required": "Required",
+        "confirm_password_mismatch": "Passwords do not match",
+        "password_must_contain_lowercase": "Password must contain at least one lowercase letter",
+        "password_must_contain_uppercase": "Password must contain at least one uppercase letter",
+        "password_must_contain_number": "Password must contain at least one number",
+        "password_must_contain_special": "Password must contain at least one special character"
     },
     "routes": {
         "login": "Login",
@@ -93,6 +102,7 @@
         "password_reset": "Password Reset",
         "register": "Register",
         "settings": "Settings",
+        "dashboard": "Dashboard",
         "verify_account": "Verify Account"
     }
 }

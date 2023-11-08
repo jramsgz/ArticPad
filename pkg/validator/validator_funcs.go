@@ -3,6 +3,7 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -198,6 +199,23 @@ func Unique(customError error) ValidateFunc {
 				}
 				return errors.New("must contain unique chars")
 			}
+		}
+		return nil
+	})
+}
+
+// Regex returns ValidateFunc that check if text matches the pattern
+func Regex(pattern string, customError error) ValidateFunc {
+	return ValidateFunc(func(text string) error {
+		matched, err := regexp.MatchString(pattern, text)
+		if err != nil {
+			return err
+		}
+		if !matched {
+			if customError != nil {
+				return customError
+			}
+			return errors.New("text does not match the pattern")
 		}
 		return nil
 	})

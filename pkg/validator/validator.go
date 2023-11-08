@@ -52,7 +52,10 @@ var (
 		v := New(
 			MinLength(8, errors.New(consts.ErrPasswordLengthLessThan8)),
 			MaxLength(64, errors.New(consts.ErrPasswordLengthMoreThan64)),
-			PasswordStrength(errors.New(consts.ErrPasswordStrength)),
+			Regex(`^\P{Ll}*\p{Ll}[\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
+			Regex(`^\P{Lu}*\p{Lu}[\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
+			Regex(`^\P{N}*\p{N}[\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
+			Regex(`^[\p{L}\p{N}]*[^\p{L}\p{N}][\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
 			Similarity(similarityAttributes, &similarity, errors.New(consts.ErrPasswordSimilarity)),
 		)
 		return v

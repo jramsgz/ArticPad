@@ -4,7 +4,7 @@
       type="submit"
       :disabled="disabled || loading"
       :class="{
-        'bg-indigo-500 hover:bg-indigo-400 cursor-not-allowed':
+        'bg-indigo-400 hover:bg-indigo-300 cursor-not-allowed':
           disabled || loading,
         'bg-indigo-600 hover:bg-indigo-700': !disabled && !loading,
       }"
