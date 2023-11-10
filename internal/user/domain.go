@@ -15,7 +15,7 @@ type User struct {
 	Username               string         `json:"username" gorm:"uniqueIndex;not null"`
 	Email                  string         `json:"email" gorm:"uniqueIndex;not null"`
 	Password               string         `json:"-" gorm:"not null"`
-	VerifiedAt             sql.NullTime   `json:"verified_at,omitempty"`
+	VerifiedAt             sql.NullTime   `json:"-"`
 	VerificationToken      string         `json:"-" gorm:"uniqueIndex;not null"`
 	PasswordResetToken     sql.NullString `json:"-" gorm:"uniqueIndex"`
 	PasswordResetExpiresAt time.Time      `json:"-"`

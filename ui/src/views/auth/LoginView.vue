@@ -127,7 +127,7 @@ const schema = toTypedSchema(
   z.object({
     login: requiredStringSchema,
     password: requiredStringSchema,
-    remember_me: z.boolean().optional(),
+    remember_me: z.boolean().optional().default(true),
   })
 );
 

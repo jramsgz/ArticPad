@@ -89,7 +89,7 @@
                     ]"
                   >
                     <span class="block py-2 px-4" @click="close">
-                      {{ item.name }}
+                      {{ $t(item.name) }}
                     </span>
                   </router-link>
                 </MenuItem>
@@ -105,15 +105,13 @@
 <script setup lang="ts">
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/vue";
 import { UserCircleIcon, MagnifyingGlassIcon } from "@heroicons/vue/24/outline";
-import { useI18n } from "vue-i18n";
 import { useAuthStore } from "@/stores/auth";
 
-const { t } = useI18n();
 const authStore = useAuthStore();
 
 const userNavigation = [
-  { name: t("routes.dashboard"), href: "/" },
-  { name: t("routes.settings"), href: "/settings/account" },
-  { name: t("auth.sign_out"), href: "/logout" },
+  { name: "routes.dashboard", href: "/" },
+  { name: "routes.settings", href: "/settings/account" },
+  { name: "auth.sign_out", href: "/logout" },
 ];
 </script>

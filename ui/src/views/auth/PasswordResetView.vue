@@ -147,14 +147,14 @@ const { errors, handleSubmit, isSubmitting } = useForm({
 const onSubmit = handleSubmit(async (values) => {
   if (token && typeof token === "string") {
     await authStore
-      .resetPassword(token, values.password)
+      .resetPassword(token, (values as any).password)
       .then(() => {
         router.push("/login");
       })
       .catch(() => {});
   } else {
     await authStore
-      .requestPasswordReset(values.login)
+      .requestPasswordReset((values as any).login)
       .then(() => {
         router.push("/login");
       })

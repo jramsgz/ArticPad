@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeMount } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { useAuthStore } from "./stores/auth";
 import { localStorageAvailable } from "./utils/localStorage";
 import NavbarLayout from "./layouts/NavbarLayout.vue";
 import FullPageLayout from "./layouts/FullPageLayout.vue";
@@ -9,6 +10,13 @@ import LoadingIndicator from "./components/core/LoadingIndicator.vue";
 
 const route = useRoute();
 const i18n = useI18n();
+const authStore = useAuthStore();
+
+onBeforeMount(() => {
+  if (authStore.user.lang) {
+    i18n.locale.value = authStore.user.lang;
+  }
+});
 
 const layout = computed(() => {
   const layout = route?.meta?.layout || "full-page";

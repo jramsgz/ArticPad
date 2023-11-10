@@ -11,24 +11,16 @@ import {
 import { useToastWithTitle } from "@/plugins/toast";
 import i18n from "@/plugins/i18n";
 
-/*
-
-https://stackblitz.com/edit/vue-3-pinia-registration-login-example?file=src%2Fstores%2Fauth.store.js
-https://upmostly.com/vue-js/how-to-use-vue-with-pinia-to-set-up-authentication
-https://v2.vuejs.org/v2/cookbook/form-validation.html?redirect=true
-https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getTime
-https://stackoverflow.com/questions/71949510/how-to-implement-remember-me-functionality-in-react-js
-
-*/
-
 // User type
 interface User {
-  id: number;
+  id: string;
   username: string;
+  displayName: string;
   email: string;
+  lang: string;
   role: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 function tryParseJSON(json: string) {

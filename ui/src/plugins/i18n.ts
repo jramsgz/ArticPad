@@ -3,8 +3,7 @@ import messages from "@/locales";
 
 const i18n = createI18n({
   legacy: false,
-  // TODO: Locale selection
-  locale: "en",
+  locale: navigator.language.split("-")[0] || "en",
   fallbackLocale: "en",
   messages,
 });
