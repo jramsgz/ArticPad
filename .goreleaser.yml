@@ -34,7 +34,7 @@ archives:
       - templates
       - src: ui/dist/*
         dst: static
-        strip_parent: true
+        strip_parent: false
 
 dockers:
 - image_templates:
