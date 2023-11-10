@@ -9,9 +9,9 @@ COPY  articpad .
 # Copy the .env file.
 COPY config/.env.sample ./config/.env
 # Copy templates.
-COPY templates/ ./templates/
+COPY templates ./templates
 # Copy the static files.
-COPY ui/dist/ ./static/
+COPY ui/dist ./static
 
 # Add packages
 RUN apk -U upgrade \ 
