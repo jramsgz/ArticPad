@@ -12,6 +12,7 @@ require (
 	github.com/rs/zerolog v1.29.0
 	github.com/wneessen/go-mail v0.3.9
 	golang.org/x/crypto v0.6.0
+	golang.org/x/text v0.7.0
 	gorm.io/driver/postgres v1.4.8
 	gorm.io/gorm v1.25.2
 )
@@ -39,7 +40,6 @@ require (
 	github.com/valyala/fasthttp v1.44.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect
