@@ -32,6 +32,7 @@ archives:
       - LICENSE
       - config/.env.sample
       - templates
+      - locales
       - src: ui/dist/*
         dst: static
         strip_parent: false
@@ -51,6 +52,8 @@ dockers:
   - "--platform=linux/amd64"
   extra_files:
   - config/.env.sample
+  - templates
+  - locales
   - ui/dist
 - image_templates:
   - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-arm64'
@@ -67,6 +70,8 @@ dockers:
   goarch: arm64
   extra_files:
   - config/.env.sample
+  - templates
+  - locales
   - ui/dist
 
 docker_manifests:

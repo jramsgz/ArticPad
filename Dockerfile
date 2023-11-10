@@ -5,13 +5,15 @@ FROM alpine:latest as release
 WORKDIR /app
 
 # Copy the compiled executable.
-COPY  articpad .
+COPY articpad .
 # Copy the .env file.
 COPY config/.env.sample ./config/.env
 # Copy templates.
-COPY templates ./templates
+COPY templates/ ./templates/
+# Copy locales.
+COPY locales/ ./locales/
 # Copy the static files.
-COPY ui/dist ./static
+COPY ui/dist/ ./static/
 
 # Add packages
 RUN apk -U upgrade \ 
