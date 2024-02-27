@@ -15,24 +15,20 @@ import (
 
 // Run ArticPad API & Static Server
 func Run() {
-	// Load configuration from .env file.
 	if err := config.LoadEnv(); err != nil {
 		log.Fatal(err)
 	}
 
-	// Start logger.
 	logger, _, logFile := startLogger(&LoggerConfig{
 		Level: config.GetString("LOG_LEVEL"),
 		Dir:   config.GetString("LOG_DIR"),
 	})
 
-	// Start i18n service.
 	i18n, err := startI18n(config.GetString("LOCALES_DIR"))
 	if err != nil {
 		logger.Fatal().Msgf("failed to start i18n service: %s", err.Error())
 	}
 
-	// Try to connect to the specified database.
 	db, err := connectToDB(&DatabaseConfig{
 		Driver:   config.GetString("DB_DRIVER"),
 		Host:     config.GetString("DB_HOST"),
@@ -47,7 +43,6 @@ func Run() {
 
 	if !fiber.IsChild() {
 		logger.Info().Msg("Running migrations...")
-		// Auto-migrate database models
 		err = db.AutoMigrate(&user.User{})
 		if err != nil {
 			logger.Fatal().Msgf("failed to automigrate models: %s", err.Error())
@@ -55,7 +50,6 @@ func Run() {
 		}
 	}
 
-	// Connect to mail server.
 	mailClient, err := mail.NewMailer(&mail.MailConfig{
 		Host:     config.GetString("MAIL_HOST"),
 		Port:     config.GetInt("MAIL_PORT"),
@@ -68,10 +62,8 @@ func Run() {
 		logger.Fatal().Msgf("Mail server connection error: %s", err)
 	}
 
-	// Start Fiber.
 	app := startFiberServer(logger, db, mailClient, i18n)
 
-	// Setup graceful shutdown.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	var serverShutdown sync.WaitGroup
@@ -99,7 +91,6 @@ func Run() {
 
 	// TODO: Only for main process or every process?
 	if true {
-		// Close resources.
 		sqlDB, _ := db.DB()
 		_ = sqlDB.Close()
 		_ = logFile.Close()

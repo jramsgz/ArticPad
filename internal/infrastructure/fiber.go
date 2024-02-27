@@ -22,14 +22,12 @@ import (
 
 // startFiberServer starts the Fiber server.
 func startFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Mailer, i18n *i18n.I18n) *fiber.App {
-	// Set trusted proxies
 	var trustedProxies []string
 	if config.GetString("TRUSTED_PROXIES") != "" {
 		trustedProxies = strings.Split(config.GetString("TRUSTED_PROXIES"), ",")
 	}
 	var enableProxy bool = len(trustedProxies) > 0
 
-	// Creates a new Fiber instance.
 	var isProduction bool = config.GetString("DEBUG") == "false"
 	app := fiber.New(fiber.Config{
 		Prefork:                 isProduction,
@@ -40,7 +38,6 @@ func startFiberServer(logger zerolog.Logger, db *gorm.DB, mailClient *mail.Maile
 		TrustedProxies:          trustedProxies,
 	})
 
-	// Use global middlewares.
 	app.Use(logging.Logger(logger, func(c *fiber.Ctx) bool {
 		return c.Path() == "/health" // skip logging for health check
 	}))

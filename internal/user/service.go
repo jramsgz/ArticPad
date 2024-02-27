@@ -74,6 +74,12 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 		return errors.New(consts.ErrUsernameAlreadyExists)
 	}
 
+	isAdmin := false
+	if ok, err := s.IsFirstUser(ctx); ok && err == nil {
+		isAdmin = true
+	}
+	user.IsAdmin = isAdmin
+
 	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
 	if err != nil {
 		return err

@@ -8,7 +8,6 @@ type HealthHandler struct{}
 func NewHealthHandler(healthRoute fiber.Router) {
 	handler := &HealthHandler{}
 
-	// Declare routing.
 	healthRoute.Get("", handler.healthCheck)
 }
 

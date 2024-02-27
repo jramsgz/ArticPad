@@ -1,5 +1,3 @@
-// Ported from https://github.com/go-passwd/validator
-
 package validator
 
 import (

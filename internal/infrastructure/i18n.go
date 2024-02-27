@@ -23,7 +23,6 @@ func startI18n(localesPath string) (*i18n.I18n, error) {
 		if file.IsDir() {
 			continue
 		}
-		// Read the file contents and load them into the i18n instance.
 		b, err := os.ReadFile(localesPath + "/" + file.Name())
 		if err != nil {
 			return nil, fmt.Errorf("failed to read i18n file: %s - %s", file.Name(), err.Error())

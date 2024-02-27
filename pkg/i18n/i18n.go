@@ -1,5 +1,3 @@
-// ported from https://github.com/knadh/listmonk/blob/master/internal/i18n/i18n.go
-
 package i18n
 
 import (
@@ -122,10 +120,11 @@ func (i *I18n) T(code, key string) string {
 // In the language values, the substitutions are represented as: {key}
 // The params and values are received as a pairs of succeeding strings.
 // That is, the number of these arguments should be an even number.
-// eg: Ts("globals.message.notFound",
+// eg:
 //
-//	"name", "notes",
-//	"error", err)
+//	 Ts("globals.message.notFound",
+//		"name", "notes",
+//		"error", err)
 func (i *I18n) Ts(code, key string, params ...string) string {
 	if len(params)%2 != 0 {
 		return key + `: Invalid arguments`
@@ -161,6 +160,36 @@ func (i *I18n) Tc(code, key string, n int) string {
 	}
 
 	return i.getSingular(s)
+}
+
+// Tsc returns the translation for the given key similar to vue i18n's tc()
+// and substitutes the params in the given map in the translated value.
+// In the language values, the substitutions are represented as: {key}
+// The params and values are received as a pairs of succeeding strings.
+// That is, the number of these arguments should be an even number.
+// eg:
+//
+//	 Tsc("globals.message.notFound",
+//		"name", "notes",
+//		"error", err)
+func (i *I18n) Tsc(code, key string, n int, params ...string) string {
+	if len(params)%2 != 0 {
+		return key + `: Invalid arguments`
+	}
+
+	s, ok := i.locales[code].langMap[key]
+	if !ok {
+		return key
+	}
+
+	s = i.Tc(code, key, n)
+	for n := 0; n < len(params); n += 2 {
+		// If there are {params} in the param values, substitute them.
+		val := i.subAllParams(code, params[n+1])
+		s = strings.ReplaceAll(s, `{`+params[n]+`}`, val)
+	}
+
+	return s
 }
 
 // getSingular returns the singular term from the vuei18n pipe separated value.

@@ -133,11 +133,6 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeBadRequest, err.Error())
 	}
 
-	isAdmin := false
-	if ok, _ := h.userService.IsFirstUser(customContext); ok {
-		isAdmin = true
-	}
-
 	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
 	user := &user.User{
 		Username:          request.Username,
@@ -145,7 +140,6 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		Password:          request.Password,
 		VerifiedAt:        sql.NullTime{Valid: false, Time: time.Time{}},
 		VerificationToken: uuid.New().String(),
-		IsAdmin:           isAdmin,
 		Lang:              h.i18n.ParseLanguage(c.Get("Accept-Language")),
 	}
 

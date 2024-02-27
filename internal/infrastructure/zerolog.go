@@ -16,7 +16,6 @@ type LoggerConfig struct {
 // startLogger starts the logger
 // Returns the logger, the writer and the file
 func startLogger(config *LoggerConfig) (zerolog.Logger, io.Writer, *os.File) {
-	// MultiWriter to log to both console and file
 	if _, err := os.Stat(config.Dir); os.IsNotExist(err) {
 		os.MkdirAll(config.Dir, 0755)
 	}
@@ -27,7 +26,6 @@ func startLogger(config *LoggerConfig) (zerolog.Logger, io.Writer, *os.File) {
 
 	mw := io.MultiWriter(os.Stdout, file)
 
-	// Set log level
 	var logLevel zerolog.Level = zerolog.DebugLevel
 	desiredLevel, err := zerolog.ParseLevel(config.Level)
 	if err == nil {

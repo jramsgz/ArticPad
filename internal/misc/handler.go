@@ -9,7 +9,6 @@ type MiscHandler struct{}
 func NewMiscHandler(miscRoute fiber.Router) {
 	handler := &MiscHandler{}
 
-	// Declare routing.
 	miscRoute.Get("", handler.defaultResponse)
 }
 
