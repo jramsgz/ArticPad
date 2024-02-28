@@ -44,12 +44,11 @@
 import {
   CogIcon,
   KeyIcon,
-  UserCircleIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/vue/24/outline";
-import { ProfileTab, AccountTab, AdminTab } from "@/components/settings";
+import { AccountTab, PasswordTab, AdminTab } from "@/components/settings";
 import { useRouter } from "vue-router";
-import { ref, markRaw, watchEffect, inject } from "vue";
+import { shallowRef, markRaw, watchEffect, inject } from "vue";
 import { axiosKey } from "@/plugins/keys";
 import type { AxiosInstance } from "axios";
 
@@ -68,12 +67,6 @@ interface SubNavigationItem {
 
 const subNavigation: SubNavigationItem[] = [
   {
-    name: "Profile",
-    href: "/settings/profile",
-    icon: UserCircleIcon,
-    tab: ProfileTab,
-  },
-  {
     name: "Account",
     href: "/settings/account",
     icon: CogIcon,
@@ -83,7 +76,7 @@ const subNavigation: SubNavigationItem[] = [
     name: "Password",
     href: "/settings/password",
     icon: KeyIcon,
-    tab: AccountTab,
+    tab: PasswordTab,
   },
   {
     name: "Admin",
@@ -94,7 +87,7 @@ const subNavigation: SubNavigationItem[] = [
 ];
 
 const router = useRouter();
-const currentTab = ref(null);
+const currentTab = shallowRef(AccountTab);
 
 watchEffect(() => {
   const tab = subNavigation.find(
@@ -103,7 +96,7 @@ watchEffect(() => {
   if (tab) {
     currentTab.value = markRaw(tab.tab);
   } else {
-    router.push("/settings/profile");
+    router.push("/settings/account");
   }
 });
 </script>

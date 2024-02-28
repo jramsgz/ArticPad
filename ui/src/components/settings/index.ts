@@ -1,5 +1,5 @@
-import ProfileTab from "./ProfileTab.vue";
 import AccountTab from "./AccountTab.vue";
+import PasswordTab from "./PasswordTab.vue";
 import AdminTab from "./AdminTab.vue";
 
-export { ProfileTab, AccountTab, AdminTab };
+export { AccountTab, PasswordTab, AdminTab };

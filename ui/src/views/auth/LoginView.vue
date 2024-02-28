@@ -9,34 +9,33 @@
         alt="ArticPad"
       />
       <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-200">
-        Sign in to your account
+        {{ $t("auth.sign_in_account") }}
       </h2>
       <p class="mt-2 text-center text-sm text-gray-400">
-        Or
+        {{ $t("common.or") }}
         <router-link
           to="/register"
           class="font-medium text-indigo-400 hover:text-indigo-500"
         >
-          create a new account
+          {{ $t("auth.create_new_account").toLocaleLowerCase() }}
         </router-link>
       </p>
     </div>
 
     <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-        <form class="space-y-6" action="#" method="POST">
+        <form class="space-y-6" @submit="onSubmit">
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-300">
-              Email address
+            <label for="login" class="block text-sm font-medium text-gray-300">
+              {{ $t("auth.email_address_or_username") }}
             </label>
             <div class="mt-1">
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autocomplete="email"
+              <InputText
+                id="login"
+                name="login"
+                type="text"
+                autocomplete="login"
                 required
-                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
           </div>
@@ -46,16 +45,15 @@
               for="password"
               class="block text-sm font-medium text-gray-300"
             >
-              Password
+              {{ $t("auth.password") }}
             </label>
             <div class="mt-1">
-              <input
+              <InputText
                 id="password"
                 name="password"
                 type="password"
-                autocomplete="current-password"
+                autocomplete="password"
                 required
-                class="appearance-none block w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md shadow-sm placeholder-gray-300 text-gray-300 focus:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
           </div>
@@ -63,13 +61,14 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <input
-                id="remember-me"
-                name="remember-me"
+                v-model="remember_me"
+                id="remember_me"
+                name="remember_me"
                 type="checkbox"
                 class="h-4 w-4 bg-gray-700 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
-              <label for="remember-me" class="ml-2 block text-sm text-gray-100">
-                Remember me
+              <label for="remember_me" class="ml-2 block text-sm text-gray-100">
+                {{ $t("auth.remember_me") }}
               </label>
             </div>
 
@@ -78,23 +77,98 @@
                 to="/password-reset"
                 class="font-medium text-indigo-400 hover:text-indigo-500"
               >
-                Forgot your password?
+                {{ $t("auth.forgot_password") }}
               </router-link>
             </div>
           </div>
 
-          <div>
+          <div
+            v-if="values.login === lastUnverifiedUser && values.login !== ''"
+            class="text-sm flex items-center justify-center"
+          >
             <button
-              type="submit"
-              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              :class="
+                'font-medium text-indigo-400 hover:text-indigo-500' +
+                (isSubmitting ? ' animate-pulse cursor-wait' : 'cursor-pointer')
+              "
+              @click="handleResendVerificationEmail"
+              :disabled="isSubmitting"
             >
-              Sign in
+              {{ $t("auth.resend_verification_email") }}
             </button>
           </div>
+          <FormButton
+            :text="$t('auth.sign_in')"
+            :disabled="Object.keys(errors).length > 0"
+            :loading="isSubmitting"
+          />
         </form>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useAuthStore } from "@/stores/auth";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useForm, useField } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import { z } from "zod";
+import { requiredStringSchema } from "@/utils/validation-schemas";
+
+import FormButton from "@/components/common/forms/FormButton.vue";
+import InputText from "@/components/common/forms/InputText.vue";
+
+const authStore = useAuthStore();
+const router = useRouter();
+
+const schema = toTypedSchema(
+  z.object({
+    login: requiredStringSchema,
+    password: requiredStringSchema,
+    remember_me: z.boolean().optional().default(true),
+  })
+);
+
+const { errors, handleSubmit, isSubmitting, values } = useForm({
+  validationSchema: schema,
+});
+const { value: remember_me } = useField("remember_me");
+
+let sentLogin = "";
+const lastUnverifiedUser = ref("");
+
+const onSubmit = handleSubmit(async (values) => {
+  sentLogin = values.login;
+  await authStore
+    .login(values.login, values.password, values.remember_me)
+    .then(() => {
+      // redirect to previous url or default to home page
+      const returnUrl = router.currentRoute.value.query.redirect as string;
+      // Dont redirect to logout page
+      if (returnUrl === "/logout") {
+        router.push("/");
+        return;
+      }
+
+      router.push(returnUrl || "/");
+    })
+    .catch((err) => {
+      if (err?.response?.data?.error_code === "email_not_verified") {
+        lastUnverifiedUser.value = sentLogin;
+      }
+    });
+});
+
+const handleResendVerificationEmail = async () => {
+  isSubmitting.value = true;
+  await authStore
+    .resendVerificationEmail(sentLogin)
+    .then(() => {
+      lastUnverifiedUser.value = "";
+    })
+    .catch(() => {});
+  isSubmitting.value = false;
+};
+</script>

@@ -41,7 +41,7 @@
                   id="search"
                   name="search"
                   class="block w-full bg-gray-700 border border-gray-500 rounded-md py-2 pl-10 pr-3 text-sm placeholder-gray-300 focus:outline-none text-gray-300 focus:text-gray-100 focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Search"
+                  placeholder="Search [Unavailable]"
                   type="search"
                 />
               </div>
@@ -51,14 +51,12 @@
         <div class="flex items-center justify-end xl:col-span-3">
           <!-- Profile dropdown -->
           <Menu as="div" class="flex-shrink-0 relative">
-            <div>
-              <MenuButton
-                class="rounded-full flex focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <span class="sr-only">Open user menu</span>
-                <UserCircleIcon class="text-white h-8 w-8" />
-              </MenuButton>
-            </div>
+            <MenuButton
+              class="rounded-full flex focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <span class="sr-only">Open user menu</span>
+              <UserCircleIcon class="text-white h-8 w-8" />
+            </MenuButton>
             <transition
               enter-active-class="transition ease-out duration-100"
               enter-from-class="transform opacity-0 scale-95"
@@ -70,23 +68,30 @@
               <MenuItems
                 class="origin-top-right absolute z-10 right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 py-1 focus:outline-none"
               >
+                <div class="px-4 py-2 text-sm text-gray-300 truncate">
+                  Signed in as <br />
+                  <strong class="text-gray-100">
+                    {{ authStore.user?.username }}
+                  </strong>
+                </div>
                 <MenuItem
                   v-for="item in userNavigation"
-                  v-slot="{ close }"
+                  v-slot="{ active, close }"
                   :key="item.name"
+                  as="template"
                 >
-                  <div>
-                    <router-link
-                      @click="close"
-                      :to="item.href"
-                      :class="[
-                        $route.path === item.href ? 'bg-gray-600' : '',
-                        'block py-2 px-4 text-sm text-gray-300 hover:bg-gray-600',
-                      ]"
-                    >
-                      {{ item.name }}
-                    </router-link>
-                  </div>
+                  <router-link
+                    :to="item.href"
+                    :class="[
+                      $route.path === item.href ? 'bg-gray-600' : '',
+                      active ? 'bg-gray-600' : '',
+                      'block text-sm text-gray-300',
+                    ]"
+                  >
+                    <span class="block py-2 px-4" @click="close">
+                      {{ $t(item.name) }}
+                    </span>
+                  </router-link>
                 </MenuItem>
               </MenuItems>
             </transition>
@@ -100,10 +105,13 @@
 <script setup lang="ts">
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/vue";
 import { UserCircleIcon, MagnifyingGlassIcon } from "@heroicons/vue/24/outline";
+import { useAuthStore } from "@/stores/auth";
+
+const authStore = useAuthStore();
 
 const userNavigation = [
-  { name: "Your Profile", href: "/settings/profile" },
-  { name: "Settings", href: "/settings/account" },
-  { name: "Sign out", href: "#" },
+  { name: "routes.dashboard", href: "/" },
+  { name: "routes.settings", href: "/settings/account" },
+  { name: "auth.sign_out", href: "/logout" },
 ];
 </script>

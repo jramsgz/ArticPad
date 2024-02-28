@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  articpad:
+    container_name: articpad
+    restart: unless-stopped
+    image: ghcr.io/jramsgz/articpad:latest
+    ports:
+      - 8080:8080
+    # Change the environment variables to your needs
+    # You can also use the .env file under /app/config
+    environment:
+      - TZ=Etc/UTC
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=
+      - DB_NAME=articpad
+      - LOG_LEVEL=warn
+      - APP_URL=http://localhost:8080
+      - APP_SECRET=RandomSecretJWTKey
+    volumes:
+      - "config:/app/config"
+      - "static:/app/static"
+      - "templates:/app/templates"
+      - "logs:/app/logs"
+    networks:
+      - application
+
+volumes:
+  config:
+  static:
+  templates:
+  logs:
+
+networks:
+  application:

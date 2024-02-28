@@ -1,0 +1,31 @@
+{
+    "auth": {
+        "confirm_password": "Confirmar contraseña",
+        "create_new_account": "crea una nueva cuenta",
+        "email_address": "Email",
+        "email_address_or_username": "Email o nombre de usuario",
+        "forgot_password": "¿Has olvidado tu contraseña?",
+        "i_agree_to_the": "Acepto la @.lower:common.privacy_policy",
+        "password": "Contraseña",
+        "remember_me": "Recuérdame",
+        "sign_in": "Iniciar sesión",
+        "sign_in_account": "Inicia sesión en tu cuenta",
+        "sign_up": "Registrarse",
+        "username": "Nombre de usuario"
+    },
+    "common": {
+        "or": "O",
+        "privacy_policy": "Política de privacidad"
+    },
+    "errors": {
+        "invalid_credentials": "Usuario, email o contraseña incorrectos.",
+        "log_in_again": "Por favor, vuelva a iniciar sesión.",
+        "login_failed": "Error al iniciar sesión",
+        "missing_token": "Falta el token",
+        "missing_token_msg": "El servidor no ha devuelto el token de sesión. Por favor, vuelva a iniciar sesión.",
+        "net_err": "Error de red",
+        "net_err_msg": "Por favor, compruebe su conexión a Internet e inténtelo de nuevo.",
+        "unauthorized": "No autorizado",
+        "unknown": "Error desconocido"
+    }
+}

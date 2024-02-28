@@ -1,0 +1,85 @@
+project_name: articpad
+
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=0
+
+before:
+  hooks:
+    - make build-local-frontend
+
+builds:
+  - binary: articpad
+    main: cmd/articpad/main.go
+    goos:
+      - windows
+      - darwin
+      - linux
+      - freebsd
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X "config.Version={{ .Tag }}" -X "config.Commit={{ .ShortCommit }}" -X "config.BuildTime={{ .Date }}"
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - config/.env.sample
+      - templates
+      - locales
+      - src: ui/dist/*
+        dst: static
+        strip_parent: false
+
+dockers:
+- image_templates:
+  - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-amd64'
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/amd64"
+  extra_files:
+  - config/.env.sample
+  - templates
+  - locales
+  - ui/dist
+- image_templates:
+  - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-arm64'
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/arm64"
+  goarch: arm64
+  extra_files:
+  - config/.env.sample
+  - templates
+  - locales
+  - ui/dist
+
+docker_manifests:
+- name_template: 'ghcr.io/jramsgz/articpad:{{ .Tag }}'
+  image_templates:
+  - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-amd64'
+  - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-arm64'
+- name_template: 'ghcr.io/jramsgz/articpad:latest'
+  image_templates:
+  - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-amd64'
+  - 'ghcr.io/jramsgz/articpad:{{ .Tag }}-arm64'
