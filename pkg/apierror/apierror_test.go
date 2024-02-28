@@ -28,7 +28,7 @@ func TestNewApiError(t *testing.T) {
 	}
 }
 
-func TestError_Error(t *testing.T) {
+func TestError(t *testing.T) {
 	status := 404
 	code := "not_found"
 	message := "Resource not found"
@@ -40,7 +40,7 @@ func TestError_Error(t *testing.T) {
 	}
 }
 
-func TestError_ShowError(t *testing.T) {
+func TestShowError(t *testing.T) {
 	status := 404
 	code := "not_found"
 	message := "Resource not found"

@@ -28,12 +28,10 @@ func jwtError(c *fiber.Ctx, err error) error {
 
 // Gets user data (their ID) from the JWT middleware. Should be executed after calling 'JWTMiddleware()'.
 func GetDataFromJWT(c *fiber.Ctx) error {
-	// Get userID from the previous route.
 	jwtData := c.Locals("user").(*jwt.Token)
 	claims := jwtData.Claims.(jwt.MapClaims)
 	parsedUserID := claims["uid"].(string)
 
-	// Go to next.
 	c.Locals("currentUser", parsedUserID)
 	return c.Next()
 }

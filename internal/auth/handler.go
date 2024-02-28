@@ -72,7 +72,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeBadRequest, err.Error())
 	}
 
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
+	langCode := h.getLangCode(c)
 
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
 	if err != nil && (err == gorm.ErrRecordNotFound || err.Error() == consts.ErrDeletedRecord) {
@@ -93,19 +93,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		}
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
-		user.ID.String(),
-		user.Username,
-		c.IP(),
-		jwt.RegisteredClaims{
-			Audience:  jwt.ClaimStrings{"articpad-users"},
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now().Add(time.Minute * -2)),
-			Issuer:    "articpad-api",
-		},
-	})
-	signedToken, err := token.SignedString([]byte(config.GetString("SECRET")))
+	signedToken, err := h.newJWTToken(user.ID.String(), user.Username, c.IP())
 	if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
@@ -133,14 +121,14 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeBadRequest, err.Error())
 	}
 
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
+	langCode := h.getLangCode(c)
 	user := &user.User{
 		Username:          request.Username,
 		Email:             request.Email,
 		Password:          request.Password,
 		VerifiedAt:        sql.NullTime{Valid: false, Time: time.Time{}},
 		VerificationToken: uuid.New().String(),
-		Lang:              h.i18n.ParseLanguage(c.Get("Accept-Language")),
+		Lang:              langCode,
 	}
 
 	err := h.userService.CreateUser(customContext, user)
@@ -178,20 +166,7 @@ func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
 	jwtData := c.Locals("user").(*jwt.Token)
 	claims := jwtData.Claims.(jwt.MapClaims)
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
-		claims["uid"].(string),
-		claims["user"].(string),
-		claims["user_ip"].(string),
-		jwt.RegisteredClaims{
-			Audience:  jwt.ClaimStrings{"articpad-users"},
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now().Add(time.Minute * -2)),
-			Issuer:    "articpad-api",
-		},
-	})
-
-	signedToken, err := token.SignedString([]byte(config.GetString("SECRET")))
+	signedToken, err := h.newJWTToken(claims["uid"].(string), claims["user"].(string), claims["user_ip"].(string))
 	if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
@@ -209,7 +184,7 @@ func (h *AuthHandler) getMe(c *fiber.Ctx) error {
 	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
+	langCode := h.getLangCode(c)
 
 	userToken := c.Locals("user").(*jwt.Token)
 	claims := userToken.Claims.(jwt.MapClaims)
@@ -231,7 +206,7 @@ func (h *AuthHandler) getMe(c *fiber.Ctx) error {
 
 // Resends a verification email to the user.
 func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
+	langCode := h.getLangCode(c)
 
 	if config.GetString("ENABLE_MAIL") == "false" {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeMailNotEnabled, h.i18n.T(langCode, "errors.mail_not_enabled"))
@@ -275,7 +250,7 @@ func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
 // Verifies a user's email and activates their account.
 func (h *AuthHandler) verifyUser(c *fiber.Ctx) error {
 	verificationToken := c.Params("token")
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
+	langCode := h.getLangCode(c)
 
 	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -295,7 +270,7 @@ func (h *AuthHandler) verifyUser(c *fiber.Ctx) error {
 
 // Sends a password reset email to the user.
 func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
+	langCode := h.getLangCode(c)
 
 	if config.GetString("ENABLE_MAIL") == "false" {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeMailNotEnabled, h.i18n.T(langCode, "errors.mail_not_enabled_reset_password"))
@@ -359,7 +334,7 @@ func (h *AuthHandler) resetPassword(c *fiber.Ctx) error {
 	customContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	langCode := h.i18n.ParseLanguage(c.Get("Accept-Language"))
+	langCode := h.getLangCode(c)
 
 	err = h.userService.ResetPassword(customContext, request.Token, request.Password)
 	if err != nil {
@@ -398,49 +373,22 @@ func (h *AuthHandler) getUser(c *fiber.Ctx) error {
 	})
 }
 
-// Updates a single user.
-func (h *AuthHandler) updateUser(c *fiber.Ctx) error {
-	// Initialize variables.
-	user := &user.User{}
-	targetedUserID := c.Locals("userID").(uuid.UUID)
-
-	// Create cancellable context.
-	customContext, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Parse request body.
-	if err := c.BodyParser(user); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-
-	// Update one user.
-	err := h.userService.UpdateUser(customContext, targetedUserID, user)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-
-	// Return result.
-	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
-		"status":  "success",
-		"message": "User has been updated successfully",
-	})
+func (h *AuthHandler) getLangCode(c *fiber.Ctx) string {
+	return h.i18n.ParseLanguage(c.Get("Accept-Language"))
 }
 
-// Deletes a single user.
-func (h *AuthHandler) deleteUser(c *fiber.Ctx) error {
-	// Initialize previous user ID.
-	targetedUserID := c.Locals("userID").(uuid.UUID)
-
-	// Create cancellable context.
-	customContext, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Delete one user.
-	err := h.userService.DeleteUser(customContext, targetedUserID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-
-	// Return 204 No Content.
-	return c.SendStatus(fiber.StatusNoContent)
+func (h *AuthHandler) newJWTToken(userId string, username string, userIP string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
+		userId,
+		username,
+		userIP,
+		jwt.RegisteredClaims{
+			Audience:  jwt.ClaimStrings{"articpad-users"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(time.Minute * -2)),
+			Issuer:    "articpad-api",
+		},
+	})
+	return token.SignedString([]byte(config.GetString("SECRET")))
 }
