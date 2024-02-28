@@ -1,5 +1,8 @@
-# Use the latest Alpine Linux image.
-FROM alpine:latest as release
+FROM alpine:3.19.1 AS release
+
+# Add nonroot user and group.
+RUN addgroup -S nonroot \
+    && adduser -S nonroot -G nonroot
 
 # Set working directory for this stage.
 WORKDIR /app
@@ -22,6 +25,9 @@ RUN apk -U upgrade \
 # Healthcheck
 HEALTHCHECK --start-period=10s --interval=10s --timeout=5s \
   CMD curl -f http://localhost:8080/health || exit 1
+
+# Set the nonroot user as the default user.
+USER nonroot
 
 # Run application and expose port 8080.
 EXPOSE 8080
