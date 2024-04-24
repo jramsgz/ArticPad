@@ -25,6 +25,11 @@ var defaults = map[string]string{
 	"DB_PASSWORD":     "",
 	"DB_PORT":         "5432",
 	"DB_DATABASE":     "config/articpad.db",
+	"REDIS_HOST":      "localhost",
+	"REDIS_PORT":      "6379",
+	"REDIS_USERNAME":  "",
+	"REDIS_PASSWORD":  "",
+	"REDIS_DB":        "0",
 	"MAIL_HOST":       "localhost",
 	"MAIL_PORT":       "25",
 	"MAIL_USER":       "",
@@ -42,6 +47,7 @@ var defaults = map[string]string{
 	"TRUSTED_PROXIES": "",
 	"TEMPLATES_DIR":   "templates",
 	"LOCALES_DIR":     "locales",
+	"RATE_LIMIT_AUTH": "true",
 }
 
 // LoadEnv loads the .env file, this should be called before using GetString or GetInt functions

@@ -96,8 +96,7 @@ func createLogFields(c *fiber.Ctx, rid string) *logFields {
 
 func handleError(log zerolog.Logger, c *fiber.Ctx, fields *logFields, start time.Time, err error) {
 	if err != nil {
-		isProduction := config.GetString("DEBUG") == "false"
-		status, message, code := getErrorMessage(err, isProduction)
+		status, message, code := getErrorMessage(err)
 		fields.StatusCode = status
 		fields.ErrorCode = code
 		fields.Error = err
@@ -121,8 +120,7 @@ func handlePanic(log zerolog.Logger, c *fiber.Ctx, fields *logFields, start time
 			err = fmt.Errorf("%v", rvr)
 		}
 
-		isProduction := config.GetString("DEBUG") == "false"
-		status, message, code := getErrorMessage(err, isProduction)
+		status, message, code := getErrorMessage(err)
 		fields.StatusCode = status
 		fields.ErrorCode = code
 		fields.Error = err
@@ -137,7 +135,8 @@ func handlePanic(log zerolog.Logger, c *fiber.Ctx, fields *logFields, start time
 	}
 }
 
-func getErrorMessage(err error, isProduction bool) (int, string, string) {
+func getErrorMessage(err error) (int, string, string) {
+	isProduction := config.GetString("DEBUG") == "false"
 	status := fiber.StatusInternalServerError
 	message := "Internal Server Error"
 	code := "unknown_error"

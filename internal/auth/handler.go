@@ -93,7 +93,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		}
 	}
 
-	signedToken, err := h.newJWTToken(user.ID.String(), user.Username, c.IP())
+	signedToken, err := newJWTToken(user.ID.String(), user.Username, c.IP())
 	if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
@@ -166,7 +166,7 @@ func (h *AuthHandler) refreshToken(c *fiber.Ctx) error {
 	jwtData := c.Locals("user").(*jwt.Token)
 	claims := jwtData.Claims.(jwt.MapClaims)
 
-	signedToken, err := h.newJWTToken(claims["uid"].(string), claims["user"].(string), claims["user_ip"].(string))
+	signedToken, err := newJWTToken(claims["uid"].(string), claims["user"].(string), claims["user_ip"].(string))
 	if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
 	}
@@ -377,7 +377,7 @@ func (h *AuthHandler) getLangCode(c *fiber.Ctx) string {
 	return h.i18n.ParseLanguage(c.Get("Accept-Language"))
 }
 
-func (h *AuthHandler) newJWTToken(userId string, username string, userIP string) (string, error) {
+func newJWTToken(userId string, username string, userIP string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
 		userId,
 		username,
