@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/glebarez/sqlite"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	_ "github.com/jackc/pgx/v5"
+	"github.com/jmoiron/sqlx"
+	_ "modernc.org/sqlite"
 )
 
 type DatabaseConfig struct {
@@ -19,20 +18,21 @@ type DatabaseConfig struct {
 	Database string
 }
 
-func connectToDB(config *DatabaseConfig) (*gorm.DB, error) {
-	var db *gorm.DB
+func connectToDB(config *DatabaseConfig) (*sqlx.DB, error) {
+	var db *sqlx.DB
 	var err error
 	switch strings.ToLower(config.Driver) {
 	case "sqlite":
-		// TODO: Remove logger from production.
-		db, err = gorm.Open(sqlite.Open(config.Database), &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Info),
-		})
+		db, err = sqlx.Open("sqlite", config.Database)
+		if err == nil {
+			err = db.Ping()
+		}
 	case "postgresql", "postgres":
 		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", config.Host, config.Port, config.Username, config.Password, config.Database)
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Error),
-		})
+		db, err = sqlx.Open("postgres", dsn)
+		if err == nil {
+			err = db.Ping()
+		}
 	default:
 		return nil, fmt.Errorf("invalid database driver: %s", config.Driver)
 	}

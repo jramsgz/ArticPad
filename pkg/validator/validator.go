@@ -40,21 +40,21 @@ func (v *Validator) Validate(text string) error {
 var (
 	// Username validator
 	DefaultUsernameValidator = New(
-		MinLength(3, errors.New(consts.ErrUsernameLengthLessThan3)),
-		MaxLength(32, errors.New(consts.ErrUsernameLengthMoreThan32)),
-		ContainsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_", errors.New(consts.ErrUsernameContainsInvalidCharacters)),
+		MinLength(3, consts.ErrUsernameLengthLessThan3),
+		MaxLength(32, consts.ErrUsernameLengthMoreThan32),
+		ContainsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_", consts.ErrUsernameContainsInvalidCharacters),
 	)
 	// Password validator
 	DefaultPasswordValidator = func(similarityAttributes []string) *Validator {
 		similarity := 0.7
 		v := New(
-			MinLength(8, errors.New(consts.ErrPasswordLengthLessThan8)),
-			MaxLength(64, errors.New(consts.ErrPasswordLengthMoreThan64)),
-			Regex(`^\P{Ll}*\p{Ll}[\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
-			Regex(`^\P{Lu}*\p{Lu}[\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
-			Regex(`^\P{N}*\p{N}[\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
-			Regex(`^[\p{L}\p{N}]*[^\p{L}\p{N}][\s\S]*$`, errors.New(consts.ErrPasswordStrength)),
-			Similarity(similarityAttributes, &similarity, errors.New(consts.ErrPasswordSimilarity)),
+			MinLength(8, consts.ErrPasswordLengthLessThan8),
+			MaxLength(64, consts.ErrPasswordLengthMoreThan64),
+			Regex(`^\P{Ll}*\p{Ll}[\s\S]*$`, consts.ErrPasswordStrength),
+			Regex(`^\P{Lu}*\p{Lu}[\s\S]*$`, consts.ErrPasswordStrength),
+			Regex(`^\P{N}*\p{N}[\s\S]*$`, consts.ErrPasswordStrength),
+			Regex(`^[\p{L}\p{N}]*[^\p{L}\p{N}][\s\S]*$`, consts.ErrPasswordStrength),
+			Similarity(similarityAttributes, &similarity, consts.ErrPasswordSimilarity),
 		)
 		return v
 	}

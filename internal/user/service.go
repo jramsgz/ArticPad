@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"errors"
 	"net/mail"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/jramsgz/articpad/internal/utils/consts"
 	"github.com/jramsgz/articpad/pkg/argon2id"
 	"github.com/jramsgz/articpad/pkg/validator"
-	"gorm.io/gorm"
 )
 
 // Implementation of the repository in this service.
@@ -53,25 +51,25 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 	}
 
 	foundUser, err := s.GetUserByEmail(ctx, user.Email)
-	if err != nil && err != gorm.ErrRecordNotFound {
-		if err.Error() == consts.ErrDeletedRecord {
-			return errors.New(consts.ErrEmailDeactivated)
+	if err != nil && err != consts.ErrRecordNotFound {
+		if err == consts.ErrDeletedRecord {
+			return consts.ErrEmailDeactivated
 		}
 		return err
 	}
 	if foundUser != nil {
-		return errors.New(consts.ErrEmailAlreadyExists)
+		return consts.ErrEmailAlreadyExists
 	}
 
 	foundUser, err = s.GetUserByUsername(ctx, user.Username)
-	if err != nil && err != gorm.ErrRecordNotFound {
-		if err.Error() == consts.ErrDeletedRecord {
-			return errors.New(consts.ErrUsernameDeactivated)
+	if err != nil && err != consts.ErrRecordNotFound {
+		if err == consts.ErrDeletedRecord {
+			return consts.ErrUsernameDeactivated
 		}
 		return err
 	}
 	if foundUser != nil {
-		return errors.New(consts.ErrUsernameAlreadyExists)
+		return consts.ErrUsernameAlreadyExists
 	}
 
 	isAdmin := false
@@ -113,7 +111,7 @@ func (s *userService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 // Implementation of 'IsFirstUser'.
 func (s *userService) IsFirstUser(ctx context.Context) (bool, error) {
 	_, err := s.userRepository.GetFirstUser(ctx)
-	if err != nil && err == gorm.ErrRecordNotFound {
+	if err != nil && err == consts.ErrRecordNotFound {
 		return true, nil
 	}
 
@@ -123,7 +121,7 @@ func (s *userService) IsFirstUser(ctx context.Context) (bool, error) {
 // Implementation of 'GetUserByEmailOrUsername'.
 func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*User, error) {
 	user, err := s.userRepository.GetUserByUsername(ctx, emailOrUsername)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && err != consts.ErrRecordNotFound {
 		return nil, err
 	} else if err == nil {
 		return user, nil
@@ -145,7 +143,7 @@ func (s *userService) VerifyUser(ctx context.Context, verificationToken string) 
 	}
 
 	if user.VerifiedAt.Valid && user.VerifiedAt.Time.Before(time.Now()) {
-		return errors.New(consts.ErrEmailAlreadyVerified)
+		return consts.ErrEmailAlreadyVerified
 	}
 
 	err = s.userRepository.SetUserVerified(ctx, user.ID)
@@ -169,7 +167,7 @@ func (s *userService) ResetPassword(ctx context.Context, token string, newPasswo
 	}
 
 	if user.PasswordResetExpiresAt.Before(time.Now()) {
-		return errors.New(consts.ErrPasswordResetTokenExpired)
+		return consts.ErrPasswordResetTokenExpired
 	}
 
 	user.Password = newPassword
@@ -192,8 +190,8 @@ func (s *userService) ResetPassword(ctx context.Context, token string, newPasswo
 // Validates the user data and returns an error if it is not valid.
 func (s *userService) validateUser(ctx context.Context, user *User) error {
 	parsedEmail, err := mail.ParseAddress(user.Email)
-	if err != nil || (err == nil && len(parsedEmail.Address) > 100) {
-		return errors.New(consts.ErrInvalidEmail)
+	if err != nil || len(parsedEmail.Address) > 100 {
+		return consts.ErrInvalidEmail
 	}
 	user.Email = parsedEmail.Address
 

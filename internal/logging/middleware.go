@@ -136,7 +136,7 @@ func handlePanic(log zerolog.Logger, c *fiber.Ctx, fields *logFields, start time
 }
 
 func getErrorMessage(err error) (int, string, string) {
-	isProduction := config.GetString("DEBUG") == "false"
+	isProduction := config.GetString(config.Debug) == "false"
 	status := fiber.StatusInternalServerError
 	message := "Internal Server Error"
 	code := "unknown_error"
