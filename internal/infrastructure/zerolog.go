@@ -17,9 +17,9 @@ type LoggerConfig struct {
 // Returns the logger, the writer and the file
 func startLogger(config *LoggerConfig) (zerolog.Logger, io.Writer, *os.File) {
 	if _, err := os.Stat(config.Dir); os.IsNotExist(err) {
-		os.MkdirAll(config.Dir, 0755)
+		os.MkdirAll(config.Dir, 0750)
 	}
-	file, err := os.OpenFile(config.Dir+"/articpad.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile(config.Dir+"/articpad.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
 	if err != nil {
 		log.Fatalf("Failed to open log file: %v", err)
 	}

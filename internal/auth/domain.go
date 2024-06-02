@@ -27,6 +27,10 @@ type Session struct {
 	ExpiresAt    time.Time `db:"expires_at"    json:"expires_at"`
 }
 
+func (s *Session) IsExpired() bool {
+	return s.ExpiresAt.Before(time.Now())
+}
+
 // SessionRepository interface defines the methods that the repository layer will implement.
 type SessionRepository interface {
 	GetSession(ctx context.Context, sessionID uuid.UUID) (*Session, error)

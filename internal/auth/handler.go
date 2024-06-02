@@ -19,24 +19,26 @@ import (
 )
 
 type AuthHandler struct {
-	userService user.UserService
-	mailer      *mailClient.Mailer
-	i18n        *i18n.I18n
+	userService    user.UserService
+	sessionService SessionService
+	mailer         *mailClient.Mailer
+	i18n           *i18n.I18n
 }
 
 type jwtClaims struct {
-	UserID string `json:"uid"`
-	User   string `json:"user"`
-	UserIP string `json:"user_ip"`
+	UserID uuid.UUID `json:"uid"`
+	User   string    `json:"user"`
+	UserIP string    `json:"user_ip"`
 	jwt.RegisteredClaims
 }
 
 // Creates a new authentication handler.
-func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailClient.Mailer, i18n *i18n.I18n) {
+func NewAuthHandler(authRoute fiber.Router, us user.UserService, ss SessionService, mail *mailClient.Mailer, i18n *i18n.I18n) {
 	handler := &AuthHandler{
-		userService: us,
-		mailer:      mail,
-		i18n:        i18n,
+		userService:    us,
+		sessionService: ss,
+		mailer:         mail,
+		i18n:           i18n,
 	}
 
 	authRoute.Post("/login", handler.signInUser)

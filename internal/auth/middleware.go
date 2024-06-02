@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"github.com/google/uuid"
 	"github.com/jramsgz/articpad/config"
 	"github.com/jramsgz/articpad/internal/utils/consts"
 	"github.com/jramsgz/articpad/pkg/apierror"
@@ -30,7 +31,10 @@ func jwtError(c *fiber.Ctx, err error) error {
 func GetDataFromJWT(c *fiber.Ctx) error {
 	jwtData := c.Locals("user").(*jwt.Token)
 	claims := jwtData.Claims.(jwt.MapClaims)
-	parsedUserID := claims["uid"].(string)
+	parsedUserID, err := uuid.Parse(claims["uid"].(string))
+	if err != nil {
+		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeInvalidJWT, "Invalid or expired JWT")
+	}
 
 	c.Locals("currentUser", parsedUserID)
 	return c.Next()

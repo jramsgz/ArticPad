@@ -35,7 +35,7 @@ CREATE TABLE sessions (
 );
 
 CREATE UNIQUE INDEX idx_sessions_refresh_token ON sessions USING btree (refresh_token);
-CREATE UNIQUE INDEX idx_sessions_user_id ON sessions USING btree (user_id);
+CREATE INDEX idx_sessions_user_id ON sessions USING btree (user_id);
 CREATE INDEX idx_sessions_expires_at ON sessions USING btree (expires_at);
 
 -- +goose Down

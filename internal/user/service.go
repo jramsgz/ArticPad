@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"database/sql"
 	"net/mail"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/jramsgz/articpad/pkg/validator"
 )
 
-// Implementation of the repository in this service.
+// User service implementation.
 type userService struct {
 	userRepository UserRepository
 }
@@ -23,29 +24,26 @@ func NewUserService(r UserRepository) UserService {
 	}
 }
 
-// Implementation of 'GetUsers'.
-func (s *userService) GetUsers(ctx context.Context) (*[]User, error) {
-	return s.userRepository.GetUsers(ctx)
-}
-
-// Implementation of 'GetUser'.
+// Get a user by ID.
 func (s *userService) GetUser(ctx context.Context, userID uuid.UUID) (*User, error) {
 	return s.userRepository.GetUser(ctx, userID)
 }
 
-// Implementation of 'GetUserByEmail'.
+// Get a user by email.
 func (s *userService) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return s.userRepository.GetUserByEmail(ctx, email)
 }
 
-// Implementation of 'GetUserByUsername'.
+// Get a user by username.
 func (s *userService) GetUserByUsername(ctx context.Context, userName string) (*User, error) {
 	return s.userRepository.GetUserByUsername(ctx, userName)
 }
 
-// Implementation of 'CreateUser'.
+// Create a new user in the system. The user is validated before being created.
+// The first user created in the system is an admin.
+// ID, CreatedAt, UpdatedAt and DeletedAt are set automatically, providen values are ignored.
 func (s *userService) CreateUser(ctx context.Context, user *User) error {
-	err := s.validateUser(ctx, user)
+	err := s.validateUser(user)
 	if err != nil {
 		return err
 	}
@@ -72,11 +70,9 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 		return consts.ErrUsernameAlreadyExists
 	}
 
-	isAdmin := false
 	if ok, err := s.IsFirstUser(ctx); ok && err == nil {
-		isAdmin = true
+		user.IsAdmin = true
 	}
-	user.IsAdmin = isAdmin
 
 	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
 	if err != nil {
@@ -84,31 +80,67 @@ func (s *userService) CreateUser(ctx context.Context, user *User) error {
 	}
 	user.Password = hashedPassword
 
+	user.ID = uuid.New()
+	now := time.Now()
+	user.CreatedAt = now
+	user.UpdatedAt = now
 	return s.userRepository.CreateUser(ctx, user)
 }
 
-// Implementation of 'UpdateUser'.
-func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, user *User) error {
-	err := s.validateUser(ctx, user)
+// Update a user in the system. The user is validated before being updated.
+// The email and username must be unique. The password is hashed before being updated if it has changed.
+// ID, CreatedAt, UpdatedAt and DeletedAt are automatically taken care of so provided values are ignored.
+func (s *userService) UpdateUser(ctx context.Context, user *User) error {
+	err := s.validateUser(user)
 	if err != nil {
 		return err
 	}
 
-	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
+	foundUser, err := s.GetUserByEmail(ctx, user.Email)
+	if err != nil && err != consts.ErrRecordNotFound {
+		if err == consts.ErrDeletedRecord {
+			return consts.ErrEmailDeactivated
+		}
+		return err
+	}
+	if foundUser != nil {
+		return consts.ErrEmailAlreadyExists
+	}
+
+	foundUser, err = s.GetUserByUsername(ctx, user.Username)
+	if err != nil && err != consts.ErrRecordNotFound {
+		if err == consts.ErrDeletedRecord {
+			return consts.ErrUsernameDeactivated
+		}
+		return err
+	}
+	if foundUser != nil {
+		return consts.ErrUsernameAlreadyExists
+	}
+
+	actualUser, err := s.GetUser(ctx, user.ID)
 	if err != nil {
 		return err
 	}
-	user.Password = hashedPassword
 
-	return s.userRepository.UpdateUser(ctx, userID, user)
+	if actualUser.Password != user.Password {
+		hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
+		if err != nil {
+			return err
+		}
+		user.Password = hashedPassword
+	}
+
+	user.UpdatedAt = time.Now()
+	return s.userRepository.UpdateUser(ctx, user)
 }
 
-// Implementation of 'DeleteUser'.
+// Delete a user from the system.
 func (s *userService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return s.userRepository.DeleteUser(ctx, userID)
 }
 
-// Implementation of 'IsFirstUser'.
+// Check if the user is the first user in the system.
 func (s *userService) IsFirstUser(ctx context.Context) (bool, error) {
 	_, err := s.userRepository.GetFirstUser(ctx)
 	if err != nil && err == consts.ErrRecordNotFound {
@@ -118,7 +150,7 @@ func (s *userService) IsFirstUser(ctx context.Context) (bool, error) {
 	return false, err
 }
 
-// Implementation of 'GetUserByEmailOrUsername'.
+// Get a user by email or username. The user is searched first by username and then by email.
 func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*User, error) {
 	user, err := s.userRepository.GetUserByUsername(ctx, emailOrUsername)
 	if err != nil && err != consts.ErrRecordNotFound {
@@ -135,7 +167,7 @@ func (s *userService) GetUserByEmailOrUsername(ctx context.Context, emailOrUsern
 	return user, err
 }
 
-// Implementation of 'VerifyUser'.
+// Verify the user email. The user is verified if the verification token is valid and the user has not been verified before.
 func (s *userService) VerifyUser(ctx context.Context, verificationToken string) error {
 	user, err := s.userRepository.GetUserByVerificationToken(ctx, verificationToken)
 	if err != nil {
@@ -146,7 +178,11 @@ func (s *userService) VerifyUser(ctx context.Context, verificationToken string) 
 		return consts.ErrEmailAlreadyVerified
 	}
 
-	err = s.userRepository.SetUserVerified(ctx, user.ID)
+	user.VerifiedAt = sql.NullTime{
+		Time:  time.Now(),
+		Valid: true,
+	}
+	err = s.userRepository.UpdateUser(ctx, user)
 	if err != nil {
 		return err
 	}
@@ -154,41 +190,45 @@ func (s *userService) VerifyUser(ctx context.Context, verificationToken string) 
 	return nil
 }
 
-// Implementation of 'SetPasswordResetToken'.
-func (s *userService) SetPasswordResetToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error {
-	return s.userRepository.SetPasswordResetToken(ctx, userID, token, expiresAt)
+// Generate a password reset token for the user. The token is returned in the user object.
+func (s *userService) GeneratePasswordResetToken(ctx context.Context, userID uuid.UUID) (*User, error) {
+	user, err := s.userRepository.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user.PasswordResetToken = sql.NullString{
+		String: uuid.New().String(),
+		Valid:  true,
+	}
+
+	user.PasswordResetExpiresAt = sql.NullTime{
+		Time:  time.Now().Add(time.Hour * 4),
+		Valid: true,
+	}
+
+	return user, s.userRepository.UpdateUser(ctx, user)
 }
 
-// Implementation of 'ResetPassword'.
+// Reset the user password. A password reset token is required to reset the password.
 func (s *userService) ResetPassword(ctx context.Context, token string, newPassword string) error {
 	user, err := s.userRepository.GetUserByPasswordResetToken(ctx, token)
 	if err != nil {
 		return err
 	}
 
-	if user.PasswordResetExpiresAt.Before(time.Now()) {
+	if !user.PasswordResetExpiresAt.Valid || user.PasswordResetExpiresAt.Time.Before(time.Now()) {
 		return consts.ErrPasswordResetTokenExpired
 	}
 
 	user.Password = newPassword
-	user.PasswordResetExpiresAt = time.Now()
+	user.PasswordResetExpiresAt.Time = time.Now()
 
-	err = s.validateUser(ctx, user)
-	if err != nil {
-		return err
-	}
-
-	hashedPassword, err := argon2id.CreateHash(user.Password, argon2id.DefaultParams)
-	if err != nil {
-		return err
-	}
-	user.Password = hashedPassword
-
-	return s.userRepository.UpdateUser(ctx, user.ID, user)
+	return s.userRepository.UpdateUser(ctx, user)
 }
 
 // Validates the user data and returns an error if it is not valid.
-func (s *userService) validateUser(ctx context.Context, user *User) error {
+func (s *userService) validateUser(user *User) error {
 	parsedEmail, err := mail.ParseAddress(user.Email)
 	if err != nil || len(parsedEmail.Address) > 100 {
 		return consts.ErrInvalidEmail
