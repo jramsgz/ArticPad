@@ -2,28 +2,16 @@
   <div
     class="min-h-full bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8"
   >
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-      <img
-        class="mx-auto h-28 w-auto"
-        src="@/assets/logo_vertical.svg"
-        alt="ArticPad"
-      />
-      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-200">
-        {{ $t("auth.sign_in_account") }}
-      </h2>
-      <p class="mt-2 text-center text-sm text-gray-400">
-        {{ $t("common.or") }}
-        <router-link
-          to="/register"
-          class="font-medium text-indigo-400 hover:text-indigo-500"
-        >
-          {{ $t("auth.create_new_account").toLocaleLowerCase() }}
-        </router-link>
-      </p>
-    </div>
-
     <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <img
+          class="mx-auto h-28 w-auto"
+          src="@/assets/logo_vertical.svg"
+          alt="ArticPad"
+        />
+        <h2 class="my-6 text-center text-3xl font-extrabold text-gray-200">
+          {{ $t("auth.sign_in_account") }}
+        </h2>
         <form class="space-y-6" @submit="onSubmit">
           <div>
             <label for="login" class="block text-sm font-medium text-gray-300">
@@ -103,6 +91,15 @@
             :loading="isSubmitting"
           />
         </form>
+        <p class="mt-2 text-center text-sm text-gray-400">
+          {{ $t("common.or") }}
+          <router-link
+            to="/register"
+            class="font-medium text-indigo-400 hover:text-indigo-500"
+          >
+            {{ $t("auth.create_new_account").toLocaleLowerCase() }}
+          </router-link>
+        </p>
       </div>
     </div>
   </div>
@@ -128,7 +125,7 @@ const schema = toTypedSchema(
     login: requiredStringSchema,
     password: requiredStringSchema,
     remember_me: z.boolean().optional().default(true),
-  })
+  }),
 );
 
 const { errors, handleSubmit, isSubmitting, values } = useForm({

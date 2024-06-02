@@ -16,28 +16,29 @@ import (
 	"github.com/jramsgz/articpad/pkg/argon2id"
 	"github.com/jramsgz/articpad/pkg/i18n"
 	mailClient "github.com/jramsgz/articpad/pkg/mail"
-	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
-	userService user.UserService
-	mailer      *mailClient.Mailer
-	i18n        *i18n.I18n
+	userService    user.UserService
+	sessionService SessionService
+	mailer         *mailClient.Mailer
+	i18n           *i18n.I18n
 }
 
 type jwtClaims struct {
-	UserID string `json:"uid"`
-	User   string `json:"user"`
-	UserIP string `json:"user_ip"`
+	UserID uuid.UUID `json:"uid"`
+	User   string    `json:"user"`
+	UserIP string    `json:"user_ip"`
 	jwt.RegisteredClaims
 }
 
 // Creates a new authentication handler.
-func NewAuthHandler(authRoute fiber.Router, us user.UserService, mail *mailClient.Mailer, i18n *i18n.I18n) {
+func NewAuthHandler(authRoute fiber.Router, us user.UserService, ss SessionService, mail *mailClient.Mailer, i18n *i18n.I18n) {
 	handler := &AuthHandler{
-		userService: us,
-		mailer:      mail,
-		i18n:        i18n,
+		userService:    us,
+		sessionService: ss,
+		mailer:         mail,
+		i18n:           i18n,
 	}
 
 	authRoute.Post("/login", handler.signInUser)
@@ -75,7 +76,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	langCode := h.getLangCode(c)
 
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
-	if err != nil && (err == gorm.ErrRecordNotFound || err.Error() == consts.ErrDeletedRecord) {
+	if err != nil && (err == consts.ErrRecordNotFound || err == consts.ErrDeletedRecord) {
 		return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
 	} else if err != nil {
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
@@ -87,7 +88,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		return apierror.NewApiError(fiber.StatusUnauthorized, consts.ErrCodeInvalidCredentials, h.i18n.T(langCode, "errors.invalid_credentials"))
 	}
 
-	if config.GetString("ENABLE_MAIL") == "true" {
+	if config.GetString(config.EnableMail) == "true" {
 		if !user.VerifiedAt.Valid || user.VerifiedAt.Time.IsZero() || user.VerifiedAt.Time.After(time.Now()) {
 			return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeEmailNotVerified, h.i18n.T(langCode, "errors.email_not_verified"))
 		}
@@ -136,7 +137,7 @@ func (h *AuthHandler) signUpUser(c *fiber.Ctx) error {
 		return consts.MapApiError(err, h.i18n, langCode)
 	}
 
-	if config.GetString("ENABLE_MAIL") == "true" {
+	if config.GetString(config.EnableMail) == "true" {
 		err := h.mailer.SendMail(templates.GetEmailVerificationEmail(h.i18n, user))
 		if err != nil {
 			return apierror.NewApiError(
@@ -192,7 +193,7 @@ func (h *AuthHandler) getMe(c *fiber.Ctx) error {
 
 	user, err := h.userService.GetUser(customContext, uuid.MustParse(userID))
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == consts.ErrRecordNotFound {
 			return apierror.NewApiError(fiber.StatusUnauthorized, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
 		}
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
@@ -208,7 +209,7 @@ func (h *AuthHandler) getMe(c *fiber.Ctx) error {
 func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
 	langCode := h.getLangCode(c)
 
-	if config.GetString("ENABLE_MAIL") == "false" {
+	if config.GetString(config.EnableMail) == "false" {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeMailNotEnabled, h.i18n.T(langCode, "errors.mail_not_enabled"))
 	}
 
@@ -227,7 +228,7 @@ func (h *AuthHandler) resendVerificationEmail(c *fiber.Ctx) error {
 
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound || err.Error() == consts.ErrDeletedRecord {
+		if err == consts.ErrRecordNotFound || err == consts.ErrDeletedRecord {
 			return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
 		}
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
@@ -256,7 +257,7 @@ func (h *AuthHandler) verifyUser(c *fiber.Ctx) error {
 	defer cancel()
 
 	err := h.userService.VerifyUser(customContext, verificationToken)
-	if err != nil && err == gorm.ErrRecordNotFound {
+	if err != nil && err == consts.ErrRecordNotFound {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeInvalidVerificationToken, h.i18n.T(langCode, "errors.invalid_verification_token"))
 	} else if err != nil {
 		return consts.MapApiError(err, h.i18n, langCode)
@@ -272,7 +273,7 @@ func (h *AuthHandler) verifyUser(c *fiber.Ctx) error {
 func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 	langCode := h.getLangCode(c)
 
-	if config.GetString("ENABLE_MAIL") == "false" {
+	if config.GetString(config.EnableMail) == "false" {
 		return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeMailNotEnabled, h.i18n.T(langCode, "errors.mail_not_enabled_reset_password"))
 	}
 
@@ -291,7 +292,7 @@ func (h *AuthHandler) forgotPassword(c *fiber.Ctx) error {
 
 	user, err := h.userService.GetUserByEmailOrUsername(customContext, request.Login)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound || err.Error() == consts.ErrDeletedRecord {
+		if err == consts.ErrRecordNotFound || err == consts.ErrDeletedRecord {
 			return apierror.NewApiError(fiber.StatusUnprocessableEntity, consts.ErrCodeAccountNotFound, h.i18n.T(langCode, "errors.account_not_found"))
 		}
 		return apierror.NewApiError(fiber.StatusInternalServerError, consts.ErrCodeUnknown, err.Error())
@@ -338,7 +339,7 @@ func (h *AuthHandler) resetPassword(c *fiber.Ctx) error {
 
 	err = h.userService.ResetPassword(customContext, request.Token, request.Password)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == consts.ErrRecordNotFound {
 			return apierror.NewApiError(fiber.StatusBadRequest, consts.ErrCodeInvalidPasswordResetToken, h.i18n.T(langCode, "errors.invalid_password_reset_token"))
 		}
 		return consts.MapApiError(err, h.i18n, langCode)
@@ -390,5 +391,5 @@ func newJWTToken(userId string, username string, userIP string) (string, error) 
 			Issuer:    "articpad-api",
 		},
 	})
-	return token.SignedString([]byte(config.GetString("SECRET")))
+	return token.SignedString([]byte(config.GetString(config.Secret)))
 }

@@ -20,11 +20,11 @@ import (
 // startFiberServer starts the Fiber server.
 func (a *App) startFiberServer() *fiber.App {
 	var trustedProxies []string
-	if config.GetString("TRUSTED_PROXIES") != "" {
-		trustedProxies = strings.Split(config.GetString("TRUSTED_PROXIES"), ",")
+	if config.GetString(config.TrustedProxies) != "" {
+		trustedProxies = strings.Split(config.GetString(config.TrustedProxies), ",")
 	}
 	var enableProxy bool = len(trustedProxies) > 0
-	var isProduction bool = config.GetString("DEBUG") == "false"
+	var isProduction bool = config.GetString(config.Debug) == "false"
 
 	app := fiber.New(fiber.Config{
 		Prefork:                 isProduction,
@@ -40,13 +40,13 @@ func (a *App) startFiberServer() *fiber.App {
 	}))
 	app.Use(cors.New(cors.Config{
 		MaxAge:       1800,
-		AllowOrigins: config.GetString("APP_URL"),
+		AllowOrigins: config.GetString(config.AppURL),
 	}))
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed, // 1
 	}))
 	app.Use(etag.New())
-	if config.GetString("RATE_LIMIT_AUTH") == "true" {
+	if config.GetString(config.RateLimit) == "true" {
 		app.Use(limiter.New(limiter.Config{
 			Max:        40,
 			Expiration: 1 * time.Minute,
@@ -66,15 +66,17 @@ func (a *App) startFiberServer() *fiber.App {
 	}
 
 	userRepository := user.NewUserRepository(a.db)
+	sessionRepository := auth.NewSessionRepository(a.db)
 
 	userService := user.NewUserService(userRepository)
+	sessionService := auth.NewSessionService(sessionRepository)
 
 	api := app.Group("/api")
 	apiv1 := api.Group("/v1")
 
 	misc.NewMiscHandler(apiv1)
 	health.NewHealthHandler(app.Group("/health"))
-	auth.NewAuthHandler(apiv1.Group("/auth"), userService, a.mail, a.i18n)
+	auth.NewAuthHandler(apiv1.Group("/auth"), userService, sessionService, a.mail, a.i18n)
 	//user.NewUserHandler(apiv1.Group("/users"), userService)
 
 	api.All("*", func(c *fiber.Ctx) error {
@@ -84,7 +86,7 @@ func (a *App) startFiberServer() *fiber.App {
 		})
 	})
 
-	app.Static("/", config.GetString("STATIC_DIR"), fiber.Static{
+	app.Static("/", config.GetString(config.StaticDir), fiber.Static{
 		Compress: true,
 		MaxAge:   3600,
 	})
@@ -95,7 +97,7 @@ func (a *App) startFiberServer() *fiber.App {
 	})
 
 	app.Get("/*", func(ctx *fiber.Ctx) error {
-		return ctx.SendFile("./" + config.GetString("STATIC_DIR") + "/index.html")
+		return ctx.SendFile("./" + config.GetString(config.StaticDir) + "/index.html")
 	})
 
 	return app

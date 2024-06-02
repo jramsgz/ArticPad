@@ -1,28 +1,31 @@
 package consts
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jramsgz/articpad/pkg/apierror"
 	"github.com/jramsgz/articpad/pkg/i18n"
 )
 
 // These are the defined errors returned using Go's errors package. They are used in the service and repository layers.
-const (
-	ErrUsernameLengthLessThan3           = "username must be at least 3 characters"
-	ErrUsernameLengthMoreThan32          = "username must be at most 32 characters"
-	ErrUsernameContainsInvalidCharacters = "username must only contain letters, numbers, dashes, underscores and dots"
-	ErrPasswordLengthLessThan8           = "password must be at least 8 characters"
-	ErrPasswordLengthMoreThan64          = "password must be at most 64 characters"
-	ErrPasswordSimilarity                = "password must not be too similar to username or email"
-	ErrInvalidEmail                      = "invalid email"
-	ErrEmailAlreadyExists                = "this email is already in use"
-	ErrUsernameAlreadyExists             = "username already exists"
-	ErrPasswordStrength                  = "password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
-	ErrEmailAlreadyVerified              = "user is already verified"
-	ErrPasswordResetTokenExpired         = "password reset token has expired"
-	ErrDeletedRecord                     = "record has been deleted"
-	ErrUsernameDeactivated               = "username has been deactivated"
-	ErrEmailDeactivated                  = "email has been deactivated"
+var (
+	ErrUsernameLengthLessThan3           = errors.New("username must be at least 3 characters")
+	ErrUsernameLengthMoreThan32          = errors.New("username must be at most 32 characters")
+	ErrUsernameContainsInvalidCharacters = errors.New("username must only contain letters, numbers, dashes, underscores and dots")
+	ErrPasswordLengthLessThan8           = errors.New("password must be at least 8 characters")
+	ErrPasswordLengthMoreThan64          = errors.New("password must be at most 64 characters")
+	ErrPasswordSimilarity                = errors.New("password must not be too similar to username or email")
+	ErrInvalidEmail                      = errors.New("invalid email")
+	ErrEmailAlreadyExists                = errors.New("this email is already in use")
+	ErrUsernameAlreadyExists             = errors.New("username already exists")
+	ErrPasswordStrength                  = errors.New("password must contain at least one uppercase letter, one lowercase letter, one number and one special character")
+	ErrEmailAlreadyVerified              = errors.New("user is already verified")
+	ErrPasswordResetTokenExpired         = errors.New("password reset token has expired")
+	ErrDeletedRecord                     = errors.New("record has been deleted")
+	ErrUsernameDeactivated               = errors.New("username has been deactivated")
+	ErrEmailDeactivated                  = errors.New("email has been deactivated")
+	ErrRecordNotFound                    = errors.New("sql: no rows in result set")
 )
 
 // These are the defined error codes returned by the API, most of them are related to errors defined by this package
@@ -63,7 +66,7 @@ type appError struct {
 }
 
 // Map of most of the errors returned by underlying packages/layers.
-var errorsMap = map[string]appError{
+var errorsMap = map[error]appError{
 	ErrUsernameLengthLessThan3:           {Status: fiber.StatusUnprocessableEntity, Code: ErrCodeUsernameLengthLessThan3Code, Message: "errors.username_too_short"},
 	ErrUsernameLengthMoreThan32:          {Status: fiber.StatusUnprocessableEntity, Code: ErrCodeUsernameLengthMoreThan32Code, Message: "errors.username_too_long"},
 	ErrUsernameContainsInvalidCharacters: {Status: fiber.StatusUnprocessableEntity, Code: ErrCodeUsernameContainsInvalidCharactersCode, Message: "errors.username_contains_invalid_characters"},
@@ -85,7 +88,7 @@ var errorsMap = map[string]appError{
 // This method is mostly used with errors returned by the service or repository layers.
 // Errors returned by the API are created directly in the handlers.
 func MapApiError(err error, i18n *i18n.I18n, langCode ...string) *apierror.Error {
-	if appError, ok := errorsMap[err.Error()]; ok {
+	if appError, ok := errorsMap[err]; ok {
 		if i18n != nil && len(langCode) > 0 {
 			appError.Message = i18n.T(langCode[0], appError.Message)
 		}

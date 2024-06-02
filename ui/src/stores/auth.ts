@@ -11,7 +11,6 @@ import {
 import { useToastWithTitle } from "@/plugins/toast";
 import i18n from "@/plugins/i18n";
 
-// User type
 interface User {
   id: string;
   username: string;
@@ -34,13 +33,13 @@ function tryParseJSON(json: string) {
 export const useAuthStore = defineStore({
   id: "auth",
   state: () => ({
-    // Initialize state from local storage to avoid reset on page refresh
-    token: getFromLocalStorage("token", null),
+    auth_token: getFromLocalStorage("auth_token", null),
+    refresh_token: getFromLocalStorage("refresh_token", null),
     user: tryParseJSON(getFromLocalStorage("user", "{}")) as User,
     lastUpdatedAt: getFromLocalStorage("lastUpdatedAt", null),
   }),
   getters: {
-    isLoggedIn: (state) => !!state.token,
+    isLoggedIn: (state) => !!state.auth_token,
   },
   actions: {
     async login(login: string, password: string, rememberMe = false) {
@@ -50,20 +49,22 @@ export const useAuthStore = defineStore({
           password,
         });
 
-        if (!response.data.token) {
+        if (!response.data.auth_token || !response.data.refresh_token) {
           throw "MISSING_TOKEN";
         }
 
         // store jwt in local storage to keep user logged in between page refreshes if remember me is enabled
         const updatedDate = new Date().toISOString();
         if (rememberMe) {
-          saveToLocalStorage("token", response.data.token);
+          saveToLocalStorage("auth_token", response.data.auth_token);
+          saveToLocalStorage("refresh_token", response.data.refresh_token);
           saveToLocalStorage("lastUpdatedAt", updatedDate);
           saveToLocalStorage("user", JSON.stringify(response.data.user));
         }
 
         // update pinia state
-        this.token = response.data.token;
+        this.auth_token = response.data.auth_token;
+        this.refresh_token = response.data.refresh_token;
         this.lastUpdatedAt = updatedDate;
         this.user = response.data.user;
       } catch (error) {
@@ -93,21 +94,48 @@ export const useAuthStore = defineStore({
     },
     async logout() {
       try {
-        await axios.post("/auth/logout");
+        await axios.post("/auth/logout", {
+          session_token: this.refresh_token,
+        });
       } catch (error) {
         handleError(error);
       }
 
-      this.token = null;
+      this.auth_token = null;
+      this.refresh_token = null;
       this.lastUpdatedAt = null;
       this.user = {} as User;
-      removeFromLocalStorage("token");
+      removeFromLocalStorage("auth_token");
+      removeFromLocalStorage("refresh_token");
       removeFromLocalStorage("lastUpdatedAt");
       removeFromLocalStorage("user");
 
       router.push("/login");
     },
-    async refreshToken() {},
+    async refreshToken() {
+      try {
+        const response = await axios.post("/auth/refresh", {
+          refresh_token: this.refresh_token,
+        });
+
+        if (!response.data.auth_token || !response.data.refresh_token) {
+          throw "MISSING_TOKEN";
+        }
+
+        const updatedDate = new Date().toISOString();
+        if (getFromLocalStorage("auth_token", null) !== null) {
+          saveToLocalStorage("auth_token", response.data.auth_token);
+          saveToLocalStorage("refresh_token", response.data.refresh_token);
+          saveToLocalStorage("lastUpdatedAt", updatedDate);
+        }
+
+        this.auth_token = response.data.auth_token;
+        this.refresh_token = response.data.refresh_token;
+        this.lastUpdatedAt = updatedDate;
+      } catch (error) {
+        return handleError(error);
+      }
+    },
     async requestPasswordReset(login: string) {
       try {
         const response = await axios.post("/auth/forgot", {

@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jramsgz/articpad/config"
+	"github.com/jramsgz/articpad/internal/utils/consts"
 	"github.com/jramsgz/articpad/pkg/apierror"
 	"github.com/rs/zerolog"
 )
@@ -136,10 +137,10 @@ func handlePanic(log zerolog.Logger, c *fiber.Ctx, fields *logFields, start time
 }
 
 func getErrorMessage(err error) (int, string, string) {
-	isProduction := config.GetString("DEBUG") == "false"
+	isProduction := config.GetString(config.Debug) == "false"
 	status := fiber.StatusInternalServerError
 	message := "Internal Server Error"
-	code := "unknown_error"
+	code := consts.ErrCodeUnknown
 
 	if e, ok := err.(*fiber.Error); ok {
 		status = e.Code
@@ -151,6 +152,10 @@ func getErrorMessage(err error) (int, string, string) {
 		code = e.Code
 		if !isProduction || (status >= 400 && status < 500) || e.Show {
 			message = e.Message
+		}
+	} else {
+		if !isProduction {
+			message = err.Error()
 		}
 	}
 

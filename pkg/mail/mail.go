@@ -14,6 +14,7 @@ type MailConfig struct {
 	Port     int
 	Host     string
 	ForceTLS bool
+	SMTPAuth string
 }
 
 // Mailer represents a mailer client.
@@ -47,8 +48,24 @@ func NewMailer(config *MailConfig) (*Mailer, error) {
 		TLSPolicy = mail.TLSMandatory
 	}
 
-	c, err := mail.NewClient(config.Host, mail.WithPort(config.Port), mail.WithSMTPAuth(mail.SMTPAuthPlain), mail.WithTLSPolicy(TLSPolicy),
-		mail.WithUsername(config.Username), mail.WithPassword(config.Password))
+	SMTPAuth := mail.SMTPAuthPlain
+	switch config.SMTPAuth {
+	case "plain":
+		SMTPAuth = mail.SMTPAuthPlain
+	case "login":
+		SMTPAuth = mail.SMTPAuthLogin
+	case "crammd5":
+		SMTPAuth = mail.SMTPAuthCramMD5
+	}
+
+	c, err := mail.NewClient(
+		config.Host,
+		mail.WithSMTPAuth(SMTPAuth),
+		mail.WithTLSPortPolicy(TLSPolicy),
+		mail.WithPort(config.Port),
+		mail.WithUsername(config.Username),
+		mail.WithPassword(config.Password),
+	)
 	if err != nil {
 		return nil, err
 	}
